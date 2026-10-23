@@ -1624,8 +1624,8 @@
         <a href="#" class="menu-item"><i class="fas fa-qrcode icon-teal"></i> Scan Barcode</a>
         <a href="#" class="menu-item"><i class="fas fa-file-medical icon-orange"></i> Input Izin / Sakit</a>
         <a href="#" class="menu-item"><i class="fas fa-chart-pie icon-blue"></i> Rekap Data</a>
-        <a href="#" class="menu-item"><i class="fas fa-pen-to-square icon-purple"></i> Input Nilai</a>
-        <a href="#" class="menu-item"><i class="fas fa-list-ol icon-cyan"></i> Daftar Nilai</a>
+        <a href="#/input-nilai" class="menu-item" data-page="input-nilai"><i class="fas fa-pen-to-square icon-purple"></i> Input Nilai</a>
+        <a href="#/daftar-nilai" class="menu-item" data-page="daftar-nilai"><i class="fas fa-list-ol icon-cyan"></i> Daftar Nilai</a>
         <a href="#" class="menu-item"><i class="fas fa-book-open icon-amber"></i> Bank Soal</a>
         <a href="#" class="menu-item"><i class="fas fa-file-arrow-down icon-green"></i> Download Absensi</a>
       </div>
@@ -2101,6 +2101,7 @@ window.isSupabaseConfigured = function () {
       {"id":"j4","no":4,"nama_penilaian":"ASAJ (Kelas 9)","semester":"","bobot":"","periode_id":"p1","tahun_ajaran":"2026/2027"},
       {"id":"j5","no":5,"nama_penilaian":"ASAT","semester":"","bobot":"","periode_id":"p1","tahun_ajaran":"2026/2027"}
     ],
+    nilai: [],
     guru_ampu: [
       {"id":"a1","no":1,"guru_id":"g1","guru_nama":"Budi Santoso","mapel_id":"m4","mapel_nama":"Matematika","kelas_id":"k1","kelas_nama":"7A","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"}
     ],
@@ -3204,6 +3205,565 @@ window.initCrudPage = function (opts) {
   };
 
 
+
+  // ========== INPUT NILAI ==========
+  window.initInputNilaiPage = async function () {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.classList.add("crud-page");
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    document.querySelector('.menu-item[data-page="input-nilai"]')?.classList.add("active");
+
+    const [periodeRes, kelasRes, jenisRes] = await Promise.all([
+      window.DB.list("periode").catch(() => ({ data: [] })),
+      window.DB.list("kelas").catch(() => ({ data: [] })),
+      window.DB.list("jenis_penilaian").catch(() => ({ data: [] })),
+    ]);
+    const periodes = periodeRes.data || [];
+    const aktif = periodes.find((p) => p.status === "Aktif") || periodes[0];
+    let periodeId = aktif ? aktif.id : "";
+    const allKelas = kelasRes.data || [];
+    const allJenis = jenisRes.data || [];
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (m) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])
+      );
+    }
+    function perLabel(p) {
+      return p ? (p.tahun_ajaran || "") + " · " + (p.semester || "") : "—";
+    }
+
+    const keOpts = Array.from({ length: 30 }, (_, i) => i + 1)
+      .map((n) => '<option value="' + n + '">' + n + "</option>")
+      .join("");
+
+    main.innerHTML =
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-pen-to-square"></i> Input Nilai</h1></div>' +
+      '<div class="periode-filter"><strong>Periode:</strong> <select id="inPeriode">' +
+      periodes
+        .map(
+          (p) =>
+            '<option value="' +
+            p.id +
+            '"' +
+            (p.id === periodeId ? " selected" : "") +
+            ">" +
+            perLabel(p) +
+            (p.status === "Aktif" ? " (Aktif)" : "") +
+            "</option>"
+        )
+        .join("") +
+      '</select></div>' +
+      '<div class="periode-filter" style="flex-wrap:wrap;gap:10px">' +
+      '<label>Filter Kelas <select id="inKelas"><option value="">— pilih —</option></select></label>' +
+      '<label>Jenis Penilaian <select id="inJenis"><option value="">— pilih —</option></select></label>' +
+      '<label>Penilaian Ke <select id="inKe">' +
+      keOpts +
+      "</select></label>" +
+      '<button type="button" class="btn btn-primary" id="inLoad"><i class="fas fa-sync"></i> Tampilkan</button>' +
+      '<button type="button" class="btn btn-secondary" id="inImport"><i class="fas fa-file-import"></i> Impor</button>' +
+      '<button type="button" class="btn btn-primary" id="inSave" disabled><i class="fas fa-save"></i> Simpan</button>' +
+      '<input type="file" id="inFile" accept=".csv,.json,text/csv" style="display:none" />' +
+      "</div>" +
+      '<div class="section-card"><div class="table-wrapper"><table class="data-table crud-table">' +
+      '<thead><tr><th class="col-no">No</th><th>NISN</th><th class="col-nama">Nama</th><th style="min-width:100px">Nilai</th></tr></thead>' +
+      '<tbody id="inBody"><tr><td colspan="4" style="text-align:center;padding:28px;color:#64748b">Pilih filter lalu klik Tampilkan</td></tr></tbody>' +
+      '</table></div><div class="table-footer"><span id="inInfo">0 siswa</span></div></div>' +
+      '<div class="progress-wrap" id="inProg" style="margin:12px"><div class="progress-bar-bg"><div class="progress-bar-fill" id="inProgFill"></div></div><div class="progress-text" id="inProgText"></div></div>';
+
+    function refreshFilters() {
+      const kelasOpts = allKelas
+        .filter((k) => !periodeId || k.periode_id === periodeId)
+        .map((k) => '<option value="' + esc(k.nama_kelas) + '">' + esc(k.nama_kelas) + "</option>")
+        .join("");
+      document.getElementById("inKelas").innerHTML = '<option value="">— pilih —</option>' + kelasOpts;
+
+      const jenisNames = [];
+      const seen = {};
+      allJenis
+        .filter((j) => !periodeId || j.periode_id === periodeId)
+        .forEach((j) => {
+          const n = j.nama_penilaian || "";
+          if (n && !seen[n]) {
+            seen[n] = 1;
+            jenisNames.push(n);
+          }
+        });
+      ["NH", "TGS", "PTS", "ASAS", "ASAJ", "ASAT"].forEach((n) => {
+        if (!seen[n]) {
+          seen[n] = 1;
+          jenisNames.push(n);
+        }
+      });
+      document.getElementById("inJenis").innerHTML =
+        '<option value="">— pilih —</option>' +
+        jenisNames.map((n) => '<option value="' + esc(n) + '">' + esc(n) + "</option>").join("");
+    }
+    refreshFilters();
+    document.getElementById("inPeriode").onchange = (e) => {
+      periodeId = e.target.value;
+      refreshFilters();
+    };
+
+    let currentSiswa = [];
+
+    async function loadGrid() {
+      const kelas = document.getElementById("inKelas").value;
+      const jenis = document.getElementById("inJenis").value;
+      const ke = parseInt(document.getElementById("inKe").value, 10) || 1;
+      if (!kelas || !jenis) {
+        window.toast("Pilih Kelas dan Jenis Penilaian", "error");
+        return;
+      }
+      const siswaRes = await window.DB.list("data_siswa").catch(() => ({ data: [] }));
+      const siswa = (siswaRes.data || []).filter(
+        (s) => (s.kelas || "") === kelas && (s.status === "Aktif" || !s.status)
+      );
+      const nilaiRes = await window.DB.list("nilai").catch(() => ({ data: [] }));
+      const existing = (nilaiRes.data || []).filter(
+        (n) =>
+          n.periode_id === periodeId &&
+          n.kelas === kelas &&
+          n.jenis_penilaian === jenis &&
+          Number(n.penilaian_ke) === ke
+      );
+      const bySiswa = {};
+      existing.forEach((n) => {
+        bySiswa[n.siswa_id] = n;
+      });
+      currentSiswa = siswa.map((s) => {
+        const ex = bySiswa[s.id];
+        return {
+          siswa_id: s.id,
+          nisn: s.nisn || s.nsin || "",
+          nama: s.nama || "",
+          nilai_id: ex ? ex.id : null,
+          nilai: ex && ex.nilai != null ? ex.nilai : "",
+        };
+      });
+      const body = document.getElementById("inBody");
+      if (!currentSiswa.length) {
+        body.innerHTML =
+          '<tr><td colspan="4" style="text-align:center;padding:28px;color:#64748b">Tidak ada siswa di kelas ' +
+          esc(kelas) +
+          "</td></tr>";
+        document.getElementById("inSave").disabled = true;
+        document.getElementById("inInfo").textContent = "0 siswa";
+        return;
+      }
+      body.innerHTML = currentSiswa
+        .map(
+          (s, i) =>
+            "<tr><td class=\"col-no\">" +
+            (i + 1) +
+            "</td><td>" +
+            esc(s.nisn) +
+            '</td><td class="col-nama">' +
+            esc(s.nama) +
+            '</td><td><input type="number" step="0.01" min="0" max="100" class="in-nilai" data-idx="' +
+            i +
+            '" value="' +
+            esc(s.nilai) +
+            '" style="width:90px;padding:6px 8px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px" /></td></tr>'
+        )
+        .join("");
+      document.getElementById("inSave").disabled = false;
+      document.getElementById("inInfo").textContent =
+        currentSiswa.length + " siswa · " + jenis + " ke-" + ke;
+    }
+
+    document.getElementById("inLoad").onclick = loadGrid;
+
+    document.getElementById("inSave").onclick = async () => {
+      const kelas = document.getElementById("inKelas").value;
+      const jenis = document.getElementById("inJenis").value;
+      const ke = parseInt(document.getElementById("inKe").value, 10) || 1;
+      const per = periodes.find((p) => p.id === periodeId);
+      const inputs = document.querySelectorAll(".in-nilai");
+      let ok = 0;
+      const prog = document.getElementById("inProg");
+      const fill = document.getElementById("inProgFill");
+      const ptext = document.getElementById("inProgText");
+      prog.classList.add("show");
+      for (let i = 0; i < inputs.length; i++) {
+        const idx = parseInt(inputs[i].dataset.idx, 10);
+        const s = currentSiswa[idx];
+        let v = inputs[i].value;
+        if (v === "") v = null;
+        else v = Number(v);
+        const body = {
+          periode_id: periodeId,
+          tahun_ajaran: per ? per.tahun_ajaran : null,
+          semester: per ? per.semester : null,
+          kelas: kelas,
+          siswa_id: s.siswa_id,
+          nisn: s.nisn,
+          nama: s.nama,
+          jenis_penilaian: jenis,
+          penilaian_ke: ke,
+          nilai: v,
+        };
+        try {
+          if (s.nilai_id) await window.DB.update("nilai", s.nilai_id, body);
+          else if (v != null) {
+            const created = await window.DB.create("nilai", body);
+            if (created && created.data) s.nilai_id = created.data.id;
+          }
+          ok++;
+        } catch (err) {}
+        fill.style.width = Math.round(((i + 1) / inputs.length) * 100) + "%";
+        ptext.textContent = "Menyimpan " + (i + 1) + " / " + inputs.length;
+      }
+      window.toast(ok + " nilai disimpan");
+      setTimeout(() => prog.classList.remove("show"), 800);
+      loadGrid();
+    };
+
+    document.getElementById("inImport").onclick = () => document.getElementById("inFile").click();
+    document.getElementById("inFile").onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      const kelas = document.getElementById("inKelas").value;
+      const jenisDefault = document.getElementById("inJenis").value;
+      const keDefault = parseInt(document.getElementById("inKe").value, 10) || 1;
+      const per = periodes.find((p) => p.id === periodeId);
+      try {
+        const text = await file.text();
+        const lines = text.replace(/^\uFEFF/, "").replace(/\r/g, "").split("\n").filter((l) => l.trim());
+        if (lines.length < 2) throw new Error("File kosong");
+        const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+        const idx = (names) => {
+          for (const n of names) {
+            const i = headers.findIndex((h) => h.toLowerCase() === n.toLowerCase());
+            if (i >= 0) return i;
+          }
+          return -1;
+        };
+        const iNisn = idx(["NISN", "nsin", "NSIN"]);
+        const iNama = idx(["Nama", "nama"]);
+        const iNilai = idx(["Nilai", "nilai"]);
+        const iJenis = idx(["Jenis Penilaian", "jenis_penilaian", "Jenis"]);
+        const iKe = idx(["Penilaian Ke", "penilaian_ke", "Ke"]);
+        const iKelas = idx(["Kelas", "kelas"]);
+        if (iNisn < 0 || iNilai < 0) throw new Error("CSV wajib kolom NISN dan Nilai");
+        const siswaAll = ((await window.DB.list("data_siswa")).data) || [];
+        const nilaiAll = ((await window.DB.list("nilai").catch(() => ({ data: [] }))).data) || [];
+        const prog = document.getElementById("inProg");
+        const fill = document.getElementById("inProgFill");
+        const ptext = document.getElementById("inProgText");
+        prog.classList.add("show");
+        let ok = 0;
+        const dataLines = lines.slice(1);
+        for (let li = 0; li < dataLines.length; li++) {
+          const cols = dataLines[li].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+          const nisn = cols[iNisn] || "";
+          const nilai = cols[iNilai] === "" ? null : Number(cols[iNilai]);
+          const jenis = iJenis >= 0 && cols[iJenis] ? cols[iJenis] : jenisDefault;
+          const ke = iKe >= 0 && cols[iKe] ? parseInt(cols[iKe], 10) : keDefault;
+          const kls = iKelas >= 0 && cols[iKelas] ? cols[iKelas] : kelas;
+          if (!nisn || !jenis || nilai == null || isNaN(nilai)) continue;
+          const s = siswaAll.find((x) => (x.nisn || x.nsin) === nisn);
+          const body = {
+            periode_id: periodeId,
+            tahun_ajaran: per ? per.tahun_ajaran : null,
+            semester: per ? per.semester : null,
+            kelas: kls || (s && s.kelas) || "",
+            siswa_id: s ? s.id : null,
+            nisn: nisn,
+            nama: s ? s.nama : cols[iNama] || "",
+            jenis_penilaian: jenis,
+            penilaian_ke: ke || 1,
+            nilai: nilai,
+          };
+          const exist = nilaiAll.find(
+            (n) =>
+              n.periode_id === periodeId &&
+              (n.siswa_id === body.siswa_id || n.nisn === nisn) &&
+              n.jenis_penilaian === jenis &&
+              Number(n.penilaian_ke) === Number(body.penilaian_ke)
+          );
+          if (exist) await window.DB.update("nilai", exist.id, body);
+          else await window.DB.create("nilai", body);
+          ok++;
+          fill.style.width = Math.round(((li + 1) / dataLines.length) * 100) + "%";
+          ptext.textContent = "Impor " + (li + 1) + " / " + dataLines.length;
+        }
+        window.toast(ok + " nilai diimpor");
+        setTimeout(() => prog.classList.remove("show"), 600);
+        if (kelas && jenisDefault) loadGrid();
+      } catch (err) {
+        window.toast("Impor gagal: " + (err.message || err), "error");
+      }
+    };
+  };
+
+  // ========== DAFTAR NILAI ==========
+  window.initDaftarNilaiPage = async function () {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.classList.add("crud-page");
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    document.querySelector('.menu-item[data-page="daftar-nilai"]')?.classList.add("active");
+
+    const [periodeRes, kelasRes, nilaiRes] = await Promise.all([
+      window.DB.list("periode").catch(() => ({ data: [] })),
+      window.DB.list("kelas").catch(() => ({ data: [] })),
+      window.DB.list("nilai").catch(() => ({ data: [] })),
+    ]);
+    const periodes = periodeRes.data || [];
+    const aktif = periodes.find((p) => p.status === "Aktif") || periodes[0];
+    let periodeId = aktif ? aktif.id : "";
+    const allKelas = kelasRes.data || [];
+    let allNilai = nilaiRes.data || [];
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (m) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])
+      );
+    }
+    function perLabel(p) {
+      return p ? (p.tahun_ajaran || "") + " · " + (p.semester || "") : "—";
+    }
+
+    main.innerHTML =
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-list-ol"></i> Daftar Nilai</h1>' +
+      '<div class="toolbar-actions">' +
+      '<button type="button" class="btn btn-secondary" id="dnImport"><i class="fas fa-file-import"></i> <span class="btn-text">Impor</span></button>' +
+      '<button type="button" class="btn btn-secondary" id="dnExport"><i class="fas fa-download"></i> <span class="btn-text">Unduh</span></button>' +
+      '<button type="button" class="btn btn-danger" id="dnBulk" disabled><i class="fas fa-trash"></i> <span class="btn-text">Hapus</span></button>' +
+      '<input type="file" id="dnFile" accept=".csv,text/csv" style="display:none" />' +
+      "</div></div>" +
+      '<div class="periode-filter"><strong>Periode:</strong> <select id="dnPeriode">' +
+      periodes
+        .map(
+          (p) =>
+            '<option value="' +
+            p.id +
+            '"' +
+            (p.id === periodeId ? " selected" : "") +
+            ">" +
+            perLabel(p) +
+            "</option>"
+        )
+        .join("") +
+      '</select> <label style="margin-left:8px">Kelas <select id="dnKelas"><option value="">Semua</option></select></label>' +
+      ' <button type="button" class="btn btn-primary" id="dnRefresh"><i class="fas fa-sync"></i> Muat</button></div>' +
+      '<div class="section-card"><div class="table-wrapper"><table class="data-table crud-table" id="dnTable">' +
+      '<thead id="dnHead"></thead><tbody id="dnBody"></tbody></table></div>' +
+      '<div class="table-footer"><span id="dnInfo">0 data</span></div></div>';
+
+    function refreshKelas() {
+      const opts = allKelas
+        .filter((k) => !periodeId || k.periode_id === periodeId)
+        .map((k) => '<option value="' + esc(k.nama_kelas) + '">' + esc(k.nama_kelas) + "</option>")
+        .join("");
+      document.getElementById("dnKelas").innerHTML = '<option value="">Semua</option>' + opts;
+    }
+    refreshKelas();
+
+    function buildPivot(rows) {
+      const colKeys = [];
+      const colSet = {};
+      rows.forEach((r) => {
+        const key = (r.jenis_penilaian || "") + "||" + String(r.penilaian_ke || 1);
+        if (!colSet[key]) {
+          let label = String(r.jenis_penilaian || "N");
+          // NH ke 1 → NH1
+          if (/^(NH|TGS|PTS|ASAS|ASAJ|ASAT)$/i.test(label.trim())) {
+            label = label.trim().toUpperCase() + String(r.penilaian_ke || 1);
+          } else {
+            label = label.replace(/\s+/g, "") + String(r.penilaian_ke || "");
+          }
+          colSet[key] = label;
+          colKeys.push({ key: key, label: label, jenis: r.jenis_penilaian, ke: r.penilaian_ke });
+        }
+      });
+      colKeys.sort((a, b) => String(a.jenis).localeCompare(String(b.jenis)) || Number(a.ke) - Number(b.ke));
+      const bySiswa = {};
+      rows.forEach((r) => {
+        const sid = r.siswa_id || r.nisn;
+        if (!bySiswa[sid]) {
+          bySiswa[sid] = { siswa_id: r.siswa_id, nisn: r.nisn, nama: r.nama, kelas: r.kelas, scores: {}, ids: [] };
+        }
+        const key = (r.jenis_penilaian || "") + "||" + String(r.penilaian_ke || 1);
+        bySiswa[sid].scores[key] = r.nilai;
+        bySiswa[sid].ids.push(r.id);
+      });
+      const list = Object.values(bySiswa).sort((a, b) => String(a.nama).localeCompare(String(b.nama)));
+      return { colKeys, list };
+    }
+
+    function render() {
+      const kelas = document.getElementById("dnKelas").value;
+      const filtered = allNilai.filter((n) => n.periode_id === periodeId && (!kelas || n.kelas === kelas));
+      const { colKeys, list } = buildPivot(filtered);
+      document.getElementById("dnHead").innerHTML =
+        '<tr><th class="col-check"><input type="checkbox" id="dnCheckAll" /></th><th class="col-no">No</th><th>NISN</th><th class="col-nama">Nama</th>' +
+        colKeys.map((c) => "<th>" + esc(c.label) + "</th>").join("") +
+        "<th>NR</th></tr>";
+      if (!list.length) {
+        document.getElementById("dnBody").innerHTML =
+          '<tr><td colspan="' +
+          (5 + colKeys.length) +
+          '" style="text-align:center;padding:28px;color:#64748b">Belum ada nilai. Input atau impor dulu.</td></tr>';
+        document.getElementById("dnInfo").textContent = "0 data";
+        document.getElementById("dnBulk").disabled = true;
+        return;
+      }
+      document.getElementById("dnBody").innerHTML = list
+        .map((s, i) => {
+          const vals = colKeys.map((c) => {
+            const v = s.scores[c.key];
+            return "<td>" + (v == null || v === "" ? "—" : esc(v)) + "</td>";
+          });
+          const nums = colKeys.map((c) => Number(s.scores[c.key])).filter((n) => !isNaN(n));
+          const nr = nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2) : "—";
+          return (
+            '<tr><td class="col-check"><input type="checkbox" class="dn-check" data-ids="' +
+            esc(s.ids.join(",")) +
+            '" /></td><td class="col-no">' +
+            (i + 1) +
+            "</td><td>" +
+            esc(s.nisn) +
+            '</td><td class="col-nama">' +
+            esc(s.nama) +
+            "</td>" +
+            vals.join("") +
+            "<td><strong>" +
+            nr +
+            "</strong></td></tr>"
+          );
+        })
+        .join("");
+      document.getElementById("dnInfo").textContent =
+        list.length + " siswa · " + colKeys.length + " kolom penilaian";
+      const bulk = document.getElementById("dnBulk");
+      const sync = () => {
+        bulk.disabled = !document.querySelectorAll(".dn-check:checked").length;
+      };
+      document.querySelectorAll(".dn-check").forEach((c) => c.addEventListener("change", sync));
+      document.getElementById("dnCheckAll").onchange = (e) => {
+        document.querySelectorAll(".dn-check").forEach((c) => (c.checked = e.target.checked));
+        sync();
+      };
+    }
+
+    async function reload() {
+      const res = await window.DB.list("nilai").catch(() => ({ data: [] }));
+      allNilai = res.data || [];
+      render();
+    }
+
+    document.getElementById("dnPeriode").onchange = (e) => {
+      periodeId = e.target.value;
+      refreshKelas();
+      render();
+    };
+    document.getElementById("dnKelas").onchange = render;
+    document.getElementById("dnRefresh").onclick = reload;
+
+    document.getElementById("dnBulk").onclick = async () => {
+      const ids = Array.from(document.querySelectorAll(".dn-check:checked"))
+        .flatMap((c) => (c.dataset.ids || "").split(","))
+        .filter(Boolean);
+      if (!ids.length || !confirm("Hapus " + ids.length + " baris nilai?")) return;
+      for (const id of ids) await window.DB.remove("nilai", id);
+      window.toast("Nilai dihapus");
+      reload();
+    };
+
+    document.getElementById("dnExport").onclick = () => {
+      const kelas = document.getElementById("dnKelas").value;
+      const filtered = allNilai.filter((n) => n.periode_id === periodeId && (!kelas || n.kelas === kelas));
+      const { colKeys, list } = buildPivot(filtered);
+      const header = ["No", "NISN", "Nama"].concat(colKeys.map((c) => c.label)).concat(["NR"]);
+      const lines = [header.join(",")];
+      list.forEach((s, i) => {
+        const nums = colKeys.map((c) => Number(s.scores[c.key])).filter((n) => !isNaN(n));
+        const nr = nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2) : "";
+        lines.push(
+          [i + 1, s.nisn, '"' + (s.nama || "") + '"']
+            .concat(colKeys.map((c) => (s.scores[c.key] != null ? s.scores[c.key] : "")))
+            .concat([nr])
+            .join(",")
+        );
+      });
+      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "daftar_nilai.csv";
+      a.click();
+    };
+
+    document.getElementById("dnImport").onclick = () => document.getElementById("dnFile").click();
+    document.getElementById("dnFile").onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const lines = text.replace(/^\uFEFF/, "").replace(/\r/g, "").split("\n").filter((l) => l.trim());
+        const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+        const idx = (names) => {
+          for (const n of names) {
+            const i = headers.findIndex((h) => h.toLowerCase() === n.toLowerCase());
+            if (i >= 0) return i;
+          }
+          return -1;
+        };
+        const iNisn = idx(["NISN", "nsin"]);
+        const iNama = idx(["Nama"]);
+        const iKelas = idx(["Kelas"]);
+        const iJenis = idx(["Jenis Penilaian", "Jenis", "jenis_penilaian"]);
+        const iKe = idx(["Ke", "Penilaian Ke", "penilaian_ke"]);
+        const iNilai = idx(["Nilai"]);
+        if (iNisn < 0 || iJenis < 0 || iNilai < 0) throw new Error("Kolom wajib: NISN, Jenis Penilaian, Nilai");
+        const per = periodes.find((p) => p.id === periodeId);
+        const siswaAll = ((await window.DB.list("data_siswa")).data) || [];
+        let ok = 0;
+        for (let li = 1; li < lines.length; li++) {
+          const cols = lines[li].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+          const nisn = cols[iNisn];
+          const jenis = cols[iJenis];
+          const nilai = cols[iNilai] === "" ? null : Number(cols[iNilai]);
+          const ke = iKe >= 0 ? parseInt(cols[iKe] || "1", 10) : 1;
+          if (!nisn || !jenis || nilai == null || isNaN(nilai)) continue;
+          const s = siswaAll.find((x) => (x.nisn || x.nsin) === nisn);
+          const body = {
+            periode_id: periodeId,
+            tahun_ajaran: per ? per.tahun_ajaran : null,
+            semester: per ? per.semester : null,
+            kelas: (iKelas >= 0 && cols[iKelas]) || (s && s.kelas) || "",
+            siswa_id: s ? s.id : null,
+            nisn,
+            nama: s ? s.nama : cols[iNama] || "",
+            jenis_penilaian: jenis,
+            penilaian_ke: ke || 1,
+            nilai,
+          };
+          const exist = allNilai.find(
+            (n) =>
+              n.periode_id === periodeId &&
+              (n.siswa_id === body.siswa_id || n.nisn === nisn) &&
+              n.jenis_penilaian === jenis &&
+              Number(n.penilaian_ke) === body.penilaian_ke
+          );
+          if (exist) await window.DB.update("nilai", exist.id, body);
+          else await window.DB.create("nilai", body);
+          ok++;
+        }
+        window.toast(ok + " nilai diimpor");
+        reload();
+      } catch (err) {
+        window.toast("Impor gagal: " + (err.message || err), "error");
+      }
+    };
+
+    render();
+  };
+
   // ========== SPA ROUTER ==========
   const PAGES = {
     "data-siswa": {
@@ -3311,6 +3871,14 @@ window.initCrudPage = function (opts) {
 
     if (hash === "mapel-kelas" || hash === "mapel" || hash === "kelas" || hash === "penilaian" || hash === "guru-ampu") {
       window.initMapelKelasPage(hash === "mapel-kelas" ? "mapel" : hash);
+      return;
+    }
+    if (hash === "input-nilai") {
+      window.initInputNilaiPage();
+      return;
+    }
+    if (hash === "daftar-nilai") {
+      window.initDaftarNilaiPage();
       return;
     }
     const conf = PAGES[hash];
