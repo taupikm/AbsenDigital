@@ -1315,6 +1315,52 @@
         margin-right: 6px;
       }
     }
+
+    /* Tabs Mapel & Kelas */
+    .tabs-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding: 0 2px;
+    }
+    .tab-btn {
+      border: 1px solid var(--blue-200);
+      background: white;
+      color: var(--blue-700);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .tab-btn.active {
+      background: #1e40af;
+      color: white;
+      border-color: #1e40af;
+    }
+    .periode-filter {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: var(--blue-50);
+      border: 1px solid var(--blue-100);
+      border-radius: 12px;
+      font-size: 13px;
+    }
+    .periode-filter select {
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      min-width: 200px;
+    }
+
   /* ========== PAGE TOOLBAR & CRUD ========== */
 .page-toolbar {
   display: flex;
@@ -1595,7 +1641,7 @@
       <!-- PENGATURAN -->
       <div class="menu-group">
         <div class="menu-group-title"><i class="fas fa-cogs"></i> PENGATURAN</div>
-        <a href="#" class="menu-item"><i class="fas fa-book icon-indigo"></i> Mapel & Kelas</a>
+        <a href="#/mapel-kelas" class="menu-item" data-page="mapel-kelas"><i class="fas fa-book icon-indigo"></i> Mapel & Kelas</a>
         <a href="#/periode" class="menu-item" data-page="periode"><i class="fas fa-calendar-check icon-green"></i> Periode</a>
         <a href="#" class="menu-item"><i class="fas fa-clock icon-orange"></i> Sesi & Hari Libur</a>
         <a href="#" class="menu-item"><i class="fas fa-hand-pointer icon-purple"></i> Izin Sidik Jari & Ujian</a>
@@ -2021,6 +2067,43 @@ window.isSupabaseConfigured = function () {
       },
     ],
     data_lulusan: [],
+    mapel: [
+      {"id":"m1","no":1,"nama_mapel":"Pendidikan Agama Islam","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m2","no":2,"nama_mapel":"Pendidikan Pancasila","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m3","no":3,"nama_mapel":"Bahasa Indonesia","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m4","no":4,"nama_mapel":"Matematika","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m5","no":5,"nama_mapel":"Ilmu Pengetahuan Alam","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m6","no":6,"nama_mapel":"Ilmu Pengetahuan Sosial","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m7","no":7,"nama_mapel":"Bahasa Inggris","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m8","no":8,"nama_mapel":"Seni Budaya & Prakarya","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m9","no":9,"nama_mapel":"Pendidikan Jasmani","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m10","no":10,"nama_mapel":"Informatika","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"m11","no":11,"nama_mapel":"Bahasa Sunda","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"}
+    ],
+    kelas: [
+      {"id":"k1","no":1,"nama_kelas":"7A","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k2","no":2,"nama_kelas":"7B","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k3","no":3,"nama_kelas":"7C","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k4","no":4,"nama_kelas":"7D","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k5","no":5,"nama_kelas":"8A","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k6","no":6,"nama_kelas":"8B","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k7","no":7,"nama_kelas":"8C","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k8","no":8,"nama_kelas":"8D","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k9","no":9,"nama_kelas":"9A","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k10","no":10,"nama_kelas":"9B","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k11","no":11,"nama_kelas":"9C","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"},
+      {"id":"k12","no":12,"nama_kelas":"9D","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"}
+    ],
+    jenis_penilaian: [
+      {"id":"j1","no":1,"nama_penilaian":"NRH = NH + TGS","semester":"Ganjil","bobot":"60","periode_id":"p1","tahun_ajaran":"2026/2027"},
+      {"id":"j2","no":2,"nama_penilaian":"PTS","semester":"Ganjil","bobot":"40","periode_id":"p1","tahun_ajaran":"2026/2027"},
+      {"id":"j3","no":3,"nama_penilaian":"ASAS","semester":"","bobot":"","periode_id":"p1","tahun_ajaran":"2026/2027"},
+      {"id":"j4","no":4,"nama_penilaian":"ASAJ (Kelas 9)","semester":"","bobot":"","periode_id":"p1","tahun_ajaran":"2026/2027"},
+      {"id":"j5","no":5,"nama_penilaian":"ASAT","semester":"","bobot":"","periode_id":"p1","tahun_ajaran":"2026/2027"}
+    ],
+    guru_ampu: [
+      {"id":"a1","no":1,"guru_id":"g1","guru_nama":"Budi Santoso","mapel_id":"m4","mapel_nama":"Matematika","kelas_id":"k1","kelas_nama":"7A","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"}
+    ],
   };
 
   function ensureSeed(table) {
@@ -2825,6 +2908,10 @@ window.initCrudPage = function (opts) {
       return;
     }
 
+    if (hash === "mapel-kelas" || hash === "mapel" || hash === "kelas" || hash === "penilaian" || hash === "guru-ampu") {
+      initMapelKelasPage(hash === "mapel-kelas" ? "mapel" : hash);
+      return;
+    }
     const conf = PAGES[hash];
     if (!conf) {
       main.innerHTML = '<div class="section-card" style="padding:40px;text-align:center"><h2>Halaman tidak ditemukan</h2><p><a href="#/">Kembali ke Dashboard</a></p></div>';
