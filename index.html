@@ -3054,6 +3054,63 @@ window.isSupabaseConfigured = function () {
       if (!res.ok) throw new Error(data.error || res.statusText);
       return data.data;
     },
+    async sidikJariStatus(tipe, refId) {
+      const q = new URLSearchParams({ tipe, ref_id: refId });
+      const res = await fetch(this.base() + "/sidik-jari?" + q, { headers: this.headers() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data.data;
+    },
+    async sidikJariRegister(payload) {
+      const res = await fetch(this.base() + "/sidik-jari", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload || {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    },
+    async sidikJariOptionsRegister(payload) {
+      const res = await fetch(this.base() + "/sidik-jari/options-register", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload || {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data.data;
+    },
+    async sidikJariRegisterVerify(payload) {
+      const res = await fetch(this.base() + "/sidik-jari/register-verify", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload || {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    },
+    async sidikJariOptionsAuth(payload) {
+      const res = await fetch(this.base() + "/sidik-jari/options-auth", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload || {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data.data;
+    },
+    async sidikJariAuthAbsen(payload) {
+      const res = await fetch(this.base() + "/sidik-jari/auth-absen", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload || {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    },
   };
 
   function api() {
@@ -3120,6 +3177,43 @@ window.isSupabaseConfigured = function () {
     sesiAktif: async () => {
       if (edgeAPI.enabled() && edgeAPI.sesiAktif) return edgeAPI.sesiAktif();
       return null;
+    },
+    sidikJariStatus: async (tipe, refId) => {
+      if (edgeAPI.enabled() && edgeAPI.sidikJariStatus) {
+        return edgeAPI.sidikJariStatus(tipe, refId);
+      }
+      // fallback lokal
+      const table = tipe === "guru" ? "data_guru" : "data_siswa";
+      const res = await localAPI.get(table, refId);
+      const d = res.data || {};
+      const registered = d.sidik_jari === true || d.sidik_jari === "true" || d.sidik_jari === 1;
+      return { registered, ref_id: d.id, nama: d.nama, sidik_jari_at: d.sidik_jari_at || null, tipe };
+    },
+    sidikJariRegister: async (payload) => {
+      if (edgeAPI.enabled() && edgeAPI.sidikJariRegister) {
+        return edgeAPI.sidikJariRegister(payload);
+      }
+      throw new Error("Daftar sidik jari memerlukan Edge Function + WebAuthn");
+    },
+    sidikJariOptionsRegister: async (payload) => {
+      if (edgeAPI.enabled() && edgeAPI.sidikJariOptionsRegister)
+        return edgeAPI.sidikJariOptionsRegister(payload);
+      throw new Error("Edge Function belum aktif");
+    },
+    sidikJariRegisterVerify: async (payload) => {
+      if (edgeAPI.enabled() && edgeAPI.sidikJariRegisterVerify)
+        return edgeAPI.sidikJariRegisterVerify(payload);
+      throw new Error("Edge Function belum aktif");
+    },
+    sidikJariOptionsAuth: async (payload) => {
+      if (edgeAPI.enabled() && edgeAPI.sidikJariOptionsAuth)
+        return edgeAPI.sidikJariOptionsAuth(payload);
+      throw new Error("Edge Function belum aktif");
+    },
+    sidikJariAuthAbsen: async (payload) => {
+      if (edgeAPI.enabled() && edgeAPI.sidikJariAuthAbsen)
+        return edgeAPI.sidikJariAuthAbsen(payload);
+      throw new Error("Edge Function belum aktif");
     },
     invalidate: invalidateCache,
     usingEdge: () => edgeAPI.enabled(),
@@ -4887,7 +4981,78 @@ window.initCrudPage = function (opts) {
     }
   };
 
-  window.initScanPage = async function (mode) {
+  
+  /** WebAuthn helpers — konversi opsi server ↔ browser */
+  window._wa = {
+    supported: function () {
+      return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
+    },
+    b64urlToBuf: function (s) {
+      const pad = "=".repeat((4 - (s.length % 4)) % 4);
+      const b64 = (s + pad).replace(/-/g, "+").replace(/_/g, "/");
+      const bin = atob(b64);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out.buffer;
+    },
+    bufToB64url: function (buf) {
+      const bytes = new Uint8Array(buf);
+      let s = "";
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    },
+    prepCreate: function (options) {
+      const o = Object.assign({}, options);
+      o.challenge = this.b64urlToBuf(options.challenge);
+      if (o.user && o.user.id) {
+        o.user = Object.assign({}, o.user, {
+          id: typeof o.user.id === "string" ? this.b64urlToBuf(o.user.id) : o.user.id,
+        });
+      }
+      if (o.excludeCredentials) {
+        o.excludeCredentials = o.excludeCredentials.map(function (c) {
+          return Object.assign({}, c, {
+            id: typeof c.id === "string" ? window._wa.b64urlToBuf(c.id) : c.id,
+          });
+        });
+      }
+      return o;
+    },
+    prepGet: function (options) {
+      const o = Object.assign({}, options);
+      o.challenge = this.b64urlToBuf(options.challenge);
+      if (o.allowCredentials) {
+        o.allowCredentials = o.allowCredentials.map(function (c) {
+          return Object.assign({}, c, {
+            id: typeof c.id === "string" ? window._wa.b64urlToBuf(c.id) : c.id,
+          });
+        });
+      }
+      return o;
+    },
+    serializeCredential: function (cred) {
+      const att = cred.response;
+      return {
+        id: cred.id,
+        rawId: window._wa.bufToB64url(cred.rawId),
+        type: cred.type,
+        clientExtensionResults: cred.clientExtensionResults || {},
+        response: {
+          clientDataJSON: window._wa.bufToB64url(att.clientDataJSON),
+          attestationObject: att.attestationObject
+            ? window._wa.bufToB64url(att.attestationObject)
+            : undefined,
+          authenticatorData: att.authenticatorData
+            ? window._wa.bufToB64url(att.authenticatorData)
+            : undefined,
+          signature: att.signature ? window._wa.bufToB64url(att.signature) : undefined,
+          userHandle: att.userHandle ? window._wa.bufToB64url(att.userHandle) : undefined,
+        },
+      };
+    },
+  };
+
+window.initScanPage = async function (mode) {
     const main = document.getElementById("main-content");
     if (!main) return;
     main.classList.add("crud-page");
@@ -4976,40 +5141,37 @@ window.initCrudPage = function (opts) {
       }));
     }
 
-    function fpKey() {
-      return "sis_fp_" + (session && session.id ? session.id : "x");
-    }
-    function isFpRegistered() {
-      if (!isGuru || !session) return false;
-      try {
-        return localStorage.getItem(fpKey()) === "1";
-      } catch (e) {
-        return false;
-      }
-    }
-    function setFpRegistered() {
-      try {
-        localStorage.setItem(fpKey(), "1");
-      } catch (e) {}
-    }
-
     const readerId = "readerScan";
     const title = mode === "siswa" ? "Sidik Jari Siswa" : "Scan Barcode";
     const icon = mode === "siswa" ? "fa-fingerprint" : "fa-qrcode";
     const sesiNow = detectSesi();
     const sesiAktif = !!sesiNow;
-    const lockCam = (isGuru && mode !== "siswa" && !sesiAktif) || (isGuru && isLibur);
+    const lockCam = (isGuru && mode !== "siswa" && !sesiAktif) || (isGuru && isLibur) || (mode === "siswa" && (!sesiAktif || isLibur));
     const sessions = listSesiAktif();
 
-    // Tombol kiri: sidik jari (guru) ATAU toggle Guru/Siswa (admin)
+    // Status sidik jari dari DB (bukan localStorage)
+    let fpRegistered = false;
+    const canUseFp = (isGuru && mode !== "siswa") || (mode === "siswa" && role === "siswa");
+    if (canUseFp && session && session.id) {
+      try {
+        const st = await window.DB.sidikJariStatus(
+          mode === "siswa" ? "siswa" : "guru",
+          session.id
+        );
+        fpRegistered = !!(st && st.registered);
+      } catch (e) {
+        fpRegistered = false;
+      }
+    }
+
+    // Tombol kiri: sidik jari (guru/siswa) ATAU toggle Guru/Siswa (admin)
     let leftBtn = "";
-    if (isGuru && mode !== "siswa") {
-      const reg = isFpRegistered();
+    if (canUseFp) {
       leftBtn =
         '<button type="button" class="scan-btn ' +
-        (reg ? "fp-absen" : "fp-register") +
+        (fpRegistered ? "fp-absen" : "fp-register") +
         '" id="btnSidikJari"><i class="fas fa-fingerprint"></i> ' +
-        (reg ? "Absen Sidik Jari" : "Daftar Sidik Jari") +
+        (fpRegistered ? "Absen Sidik Jari" : "Daftar Sidik Jari") +
         "</button>";
     } else if (isAdmin && mode !== "siswa") {
       leftBtn =
@@ -5252,33 +5414,101 @@ window.initCrudPage = function (opts) {
       else await startCam();
     };
 
-    // Sidik jari guru
+    // Sidik jari (guru / siswa) — WebAuthn → sensor HP + Edge Function
     const btnFp = document.getElementById("btnSidikJari");
-    if (btnFp) {
+    if (btnFp && session) {
+      const fpTipe = mode === "siswa" ? "siswa" : "guru";
       btnFp.onclick = async function () {
-        if (!isFpRegistered()) {
-          if (!confirm("Daftarkan sidik jari perangkat ini untuk absensi Anda?")) return;
-          setFpRegistered();
-          btnFp.className = "scan-btn fp-absen";
-          btnFp.innerHTML = '<i class="fas fa-fingerprint"></i> Absen Sidik Jari';
-          window._scanPopup(true, "Sidik jari terdaftar", "Gunakan tombol Absen Sidik Jari untuk absen.");
+        if (!window._wa.supported()) {
+          window._scanPopup(
+            false,
+            "Tidak didukung",
+            "Perangkat/browser ini tidak mendukung sidik jari (WebAuthn). Gunakan Chrome/Safari di HP.",
+            3000
+          );
           return;
         }
+
+        // ----- DAFTAR -----
+        if (!fpRegistered) {
+          if (
+            !confirm(
+              "Daftarkan sidik jari / biometrik HP ini untuk akun Anda?\n\nSistem akan meminta verifikasi sidik jari atau wajah."
+            )
+          )
+            return;
+          try {
+            window._scanPopup(true, "Menyiapkan…", "Meminta opsi dari server", 1500);
+            const options = await window.DB.sidikJariOptionsRegister({
+              tipe: fpTipe,
+              ref_id: session.id,
+            });
+            window._scanPopup(true, "Sidik jari", "Sentuh sensor sidik jari / Face ID…", 8000);
+            const publicKey = window._wa.prepCreate(options);
+            const cred = await navigator.credentials.create({ publicKey: publicKey });
+            if (!cred) throw new Error("Pendaftaran dibatalkan");
+            const deviceId =
+              (navigator.userAgent || "").slice(0, 80) +
+              "|" +
+              (screen.width || "") +
+              "x" +
+              (screen.height || "");
+            const out = await window.DB.sidikJariRegisterVerify({
+              tipe: fpTipe,
+              ref_id: session.id,
+              response: window._wa.serializeCredential(cred),
+              device_id: deviceId,
+            });
+            fpRegistered = true;
+            btnFp.className = "scan-btn fp-absen";
+            btnFp.innerHTML = '<i class="fas fa-fingerprint"></i> Absen Sidik Jari';
+            window._scanPopup(
+              true,
+              "Sidik jari terdaftar",
+              out.message || "Sensor HP siap untuk absensi",
+              1800
+            );
+          } catch (err) {
+            const msg = String(err.message || err);
+            if (msg.indexOf("denied") >= 0 || err.name === "NotAllowedError") {
+              window._scanPopup(false, "Dibatalkan", "Verifikasi biometrik dibatalkan atau gagal", 2500);
+            } else {
+              window._scanPopup(false, "Gagal daftar", msg, 2800);
+            }
+          }
+          return;
+        }
+
+        // ----- ABSEN -----
         try {
+          window._scanPopup(true, "Menyiapkan…", "Meminta opsi absen", 1200);
+          const options = await window.DB.sidikJariOptionsAuth({
+            tipe: fpTipe,
+            ref_id: session.id,
+          });
+          window._scanPopup(true, "Sidik jari", "Sentuh sensor sidik jari / Face ID…", 8000);
+          const publicKey = window._wa.prepGet(options);
+          const assertion = await navigator.credentials.get({ publicKey: publicKey });
+          if (!assertion) throw new Error("Verifikasi dibatalkan");
           const meta = scannerMeta();
-          const kode = session.kode || session.id || "";
-          const out = await window.DB.absen({
-            tipe: "guru",
-            kode: kode,
+          const out = await window.DB.sidikJariAuthAbsen({
+            tipe: fpTipe,
+            ref_id: session.id,
+            response: window._wa.serializeCredential(assertion),
             scanner_id: meta.scanner_id,
             scanner_nama: meta.scanner_nama,
             scanner_role: meta.scanner_role,
-            mode: "sidik_jari",
           });
-          window._scanPopup(true, "Absen sidik jari berhasil", out.message || session.nama);
+          window._scanPopup(true, "Absen berhasil", out.message || session.nama, 1400);
+          if (window.DB.invalidate) window.DB.invalidate("absensi");
           loadToday();
         } catch (err) {
-          window._scanPopup(false, "Gagal absen", String(err.message || err));
+          const msg = String(err.message || err);
+          if (msg.indexOf("denied") >= 0 || err.name === "NotAllowedError") {
+            window._scanPopup(false, "Dibatalkan", "Verifikasi biometrik dibatalkan atau gagal", 2500);
+          } else {
+            window._scanPopup(false, "Gagal absen", msg, 2800);
+          }
         }
       };
     }
