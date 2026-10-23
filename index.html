@@ -2959,15 +2959,35 @@ window.isSupabaseConfigured = function () {
       if (!res.ok) throw new Error(data.error || res.statusText);
       return data.data;
     },
-    async absen(tipe, kode) {
+    async absen(payload) {
+      // payload: { tipe, kode, scanner_id, scanner_nama, scanner_role, mode }
+      const body = typeof payload === "string"
+        ? { tipe: arguments[0], kode: arguments[1] }
+        : payload || {};
       const res = await fetch(this.base() + "/absen", {
         method: "POST",
         headers: this.headers(),
-        body: JSON.stringify({ tipe, kode }),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || res.statusText);
+      return data;
+    },
+    async hapusAbsensi(payload) {
+      const res = await fetch(this.base() + "/hapus-absensi", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(payload || {}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || res.statusText);
       return data;
+    },
+    async sesiAktif() {
+      const res = await fetch(this.base() + "/sesi-aktif", { headers: this.headers() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data.data;
     },
   };
 
@@ -3019,13 +3039,135 @@ window.isSupabaseConfigured = function () {
       if (edgeAPI.enabled() && edgeAPI.login) return edgeAPI.login(kode);
       throw new Error("Login via Edge Function belum aktif");
     },
-    absen: async (tipe, kode) => {
-      if (edgeAPI.enabled() && edgeAPI.absen) return edgeAPI.absen(tipe, kode);
-      throw new Error("Absen via Edge Function belum aktif");
+    absen: async (tipeOrPayload, kode) => {
+      const payload =
+        typeof tipeOrPayload === "object" && tipeOrPayload
+          ? tipeOrPayload
+          : { tipe: tipeOrPayload, kode: kode };
+      if (edgeAPI.enabled() && edgeAPI.absen) return edgeAPI.absen(payload);
+      // Fallback lokal (demo) — tetap isi periode_id
+      return window._absenLocalFallback(payload);
+    },
+    hapusAbsensi: async (payload) => {
+      if (edgeAPI.enabled() && edgeAPI.hapusAbsensi) return edgeAPI.hapusAbsensi(payload);
+      throw new Error("Hapus absensi via Edge Function belum aktif");
+    },
+    sesiAktif: async () => {
+      if (edgeAPI.enabled() && edgeAPI.sesiAktif) return edgeAPI.sesiAktif();
+      return null;
     },
     invalidate: invalidateCache,
     usingEdge: () => edgeAPI.enabled(),
     isDemo: () => !edgeAPI.enabled() && !(window.isSupabaseConfigured && window.isSupabaseConfigured()),
+  };
+
+  /** Fallback absensi lokal/demo bila Edge Function belum aktif — selalu isi periode_id */
+  window._absenLocalFallback = async function (payload) {
+    const tipe = String(payload.tipe || "").toLowerCase();
+    const kode = String(payload.kode || "").trim();
+    if (!tipe || !kode) throw new Error("tipe & kode wajib");
+
+    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const hm =
+      String(now.getHours()).padStart(2, "0") +
+      ":" +
+      String(now.getMinutes()).padStart(2, "0");
+    const toMin = (h) => {
+      const p = String(h || "00:00").split(":");
+      return parseInt(p[0], 10) * 60 + parseInt(p[1] || "0", 10);
+    };
+
+    // periode aktif
+    const pr = await localAPI.list("periode").catch(() => ({ data: [] }));
+    let periode = (pr.data || []).find((p) => p.status === "Aktif") || (pr.data || [])[0];
+    if (!periode) throw new Error("Tidak ada periode aktif");
+
+    // hari libur
+    const hl = await localAPI.list("hari_libur").catch(() => ({ data: [] }));
+    const libur = (hl.data || []).find((h) => h.tanggal === today);
+    if (libur) throw new Error("Hari libur: " + (libur.keterangan || ""));
+
+    // sesi
+    const ss = await localAPI.list("setting_sesi").catch(() => ({ data: [] }));
+    let sesiList = (ss.data || [])
+      .filter((s) => s.aktif === true || s.aktif === "true" || s.aktif == null)
+      .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+    if (!sesiList.length) {
+      sesiList = [
+        { nama: "Sesi 1", waktu_1: "06:15", waktu_2: "07:30", waktu_3: "08:00" },
+        { nama: "Sesi 2", waktu_1: "09:45", waktu_2: "12:45", waktu_3: "13:00" },
+      ];
+    }
+    const m = toMin(hm);
+    let sesiInfo = null;
+    for (const s of sesiList) {
+      const w1 = toMin(s.waktu_1), w2 = toMin(s.waktu_2), w3 = toMin(s.waktu_3);
+      if (m >= w1 && m <= w3) {
+        sesiInfo = {
+          sesi: s.nama,
+          status: m <= w2 ? "TW" : "TL",
+          label: s.nama,
+        };
+        break;
+      }
+    }
+    if (!sesiInfo) throw new Error("Di luar jam absensi / tidak ada sesi aktif");
+
+    // person
+    let person = null;
+    if (tipe === "siswa") {
+      const res = await localAPI.list("data_siswa");
+      const s = (res.data || []).find(
+        (x) => String(x.nsin || "") === kode || String(x.nisn || "") === kode
+      );
+      if (!s) throw new Error("Siswa tidak ditemukan");
+      person = { id: s.id, nama: s.nama, kelas: s.kelas, kode: s.nsin || s.nisn || kode };
+    } else {
+      const res = await localAPI.list("data_guru");
+      const g = (res.data || []).find(
+        (x) => String(x.nip || "") === kode || String(x.id || "") === kode
+      );
+      if (!g) throw new Error("Guru tidak ditemukan");
+      person = { id: g.id, nama: g.nama, kelas: null, kode: g.nip || kode };
+    }
+
+    const all = ((await localAPI.list("absensi")).data) || [];
+    const exist = all.find(
+      (a) =>
+        a.tanggal === today &&
+        a.tipe === tipe &&
+        a.kode === person.kode &&
+        a.sesi === sesiInfo.sesi &&
+        a.periode_id === periode.id
+    );
+    if (exist) throw new Error(person.nama + " sudah absen " + sesiInfo.sesi + " (" + exist.status + ")");
+
+    const created = await localAPI.create("absensi", {
+      tanggal: today,
+      tipe,
+      ref_id: person.id,
+      kode: person.kode,
+      nama: person.nama,
+      kelas: person.kelas,
+      sesi: sesiInfo.sesi,
+      status: sesiInfo.status,
+      jam_scan: now.toISOString(),
+      keterangan: payload.mode === "sidik_jari" ? "sidik_jari" : null,
+      periode_id: periode.id,
+      scanner_id: payload.scanner_id || null,
+      scanner_nama: payload.scanner_nama || null,
+      scanner_role: payload.scanner_role || null,
+    });
+    if (window.DB && window.DB.invalidate) window.DB.invalidate("absensi");
+    const label = sesiInfo.status === "TW" ? "Tepat Waktu" : sesiInfo.status === "TL" ? "Terlambat" : sesiInfo.status;
+    return {
+      ok: true,
+      message: person.nama + " · " + sesiInfo.label + " · " + label + " · " + hm,
+      data: created.data,
+      periode_id: periode.id,
+      sesi: sesiInfo,
+    };
   };
 })();
 
@@ -4952,78 +5094,19 @@ window.initCrudPage = function (opts) {
       if (!textKode || window._scanState.processing) return;
       window._scanState.processing = true;
       try {
-        const sesiInfo = detectSesi();
-        if (!sesiInfo) {
-          window._scanPopup(false, "Di luar jam absensi", "Tidak ada sesi aktif saat ini.");
-          return;
-        }
         let target = scanTarget;
         if (isGuru || mode === "siswa") target = "siswa";
 
-        if (window.DB.usingEdge && window.DB.usingEdge()) {
-          const out = await window.DB.absen(target, textKode);
-          window._scanPopup(true, "Absensi berhasil", out.message || textKode);
-          loadToday();
-          return;
-        }
-
-        let person = null;
-        if (target === "siswa") {
-          const res = await window.DB.list("data_siswa");
-          person = (res.data || []).find(
-            (s) => String(s.nisn || "") === textKode || String(s.nsin || "") === textKode
-          );
-          if (!person) throw new Error("Siswa dengan kode " + textKode + " tidak ditemukan");
-        } else {
-          if (isGuru) throw new Error("Guru hanya dapat memindai barcode siswa");
-          const res = await window.DB.list("data_guru");
-          person = (res.data || []).find((g) => String(g.nip || "") === textKode);
-          if (!person) throw new Error("Guru NIP " + textKode + " tidak ditemukan");
-        }
-
-        const today = new Date().toISOString().slice(0, 10);
-        const all = ((await window.DB.list("absensi")).data) || [];
-        const exist = all.find(
-          (a) =>
-            a.tanggal === today &&
-            a.tipe === target &&
-            a.kode === textKode &&
-            a.sesi === sesiInfo.sesi
-        );
-        if (exist) {
-          window._scanPopup(
-            false,
-            "Sudah absen",
-            (person.nama || textKode) + " sudah absen " + sesiInfo.sesi + " (" + exist.status + ")"
-          );
-          return;
-        }
-
         const meta = scannerMeta();
-        await window.DB.create("absensi", {
-          tanggal: today,
+        const out = await window.DB.absen({
           tipe: target,
-          ref_id: person.id,
           kode: textKode,
-          nama: person.nama,
-          kelas: target === "siswa" ? person.kelas || null : null,
-          sesi: sesiInfo.sesi,
-          status: sesiInfo.status,
-          jam_scan: new Date().toISOString(),
-          keterangan: null,
           scanner_id: meta.scanner_id,
           scanner_nama: meta.scanner_nama,
           scanner_role: meta.scanner_role,
+          mode: "barcode",
         });
-        if (window.DB.invalidate) window.DB.invalidate("absensi");
-
-        const label =
-          sesiInfo.status === "TW" ? "Tepat Waktu" : sesiInfo.status === "TL" ? "Terlambat" : sesiInfo.status;
-        window._scanPopup(
-          true,
-          "Absensi berhasil",
-          person.nama + " · " + sesiInfo.label + " · " + label + " · " + nowHM()
-        );
+        window._scanPopup(true, "Absensi berhasil", out.message || textKode);
         loadToday();
       } catch (err) {
         window._scanPopup(false, "Gagal absensi", String(err.message || err));
@@ -5110,46 +5193,18 @@ window.initCrudPage = function (opts) {
           window._scanPopup(true, "Sidik jari terdaftar", "Gunakan tombol Absen Sidik Jari untuk absen.");
           return;
         }
-        const sesiInfo = detectSesi();
-        if (!sesiInfo) {
-          window._scanPopup(false, "Di luar jam absensi", "Tidak ada sesi aktif.");
-          return;
-        }
         try {
-          const today = new Date().toISOString().slice(0, 10);
-          const kode = session.kode || session.id || "guru";
-          const all = ((await window.DB.list("absensi")).data) || [];
-          const exist = all.find(
-            (a) =>
-              a.tanggal === today &&
-              a.tipe === "guru" &&
-              (a.ref_id === session.id || a.kode === kode) &&
-              a.sesi === sesiInfo.sesi
-          );
-          if (exist) {
-            window._scanPopup(false, "Sudah absen", "Anda sudah absen " + sesiInfo.sesi + " (" + exist.status + ")");
-            return;
-          }
           const meta = scannerMeta();
-          await window.DB.create("absensi", {
-            tanggal: today,
+          const kode = session.kode || session.id || "";
+          const out = await window.DB.absen({
             tipe: "guru",
-            ref_id: session.id,
             kode: kode,
-            nama: session.nama || "Guru",
-            kelas: null,
-            sesi: sesiInfo.sesi,
-            status: sesiInfo.status,
-            jam_scan: new Date().toISOString(),
-            keterangan: "sidik_jari",
             scanner_id: meta.scanner_id,
             scanner_nama: meta.scanner_nama,
             scanner_role: meta.scanner_role,
+            mode: "sidik_jari",
           });
-          if (window.DB.invalidate) window.DB.invalidate("absensi");
-          const label =
-            sesiInfo.status === "TW" ? "Tepat Waktu" : sesiInfo.status === "TL" ? "Terlambat" : sesiInfo.status;
-          window._scanPopup(true, "Absen sidik jari berhasil", session.nama + " · " + sesiInfo.label + " · " + label);
+          window._scanPopup(true, "Absen sidik jari berhasil", out.message || session.nama);
           loadToday();
         } catch (err) {
           window._scanPopup(false, "Gagal absen", String(err.message || err));
@@ -5465,6 +5520,21 @@ window.initCrudPage = function (opts) {
           const rows = await findMatches();
           if (!rows.length) return window.toast("Tidak ada data", "error");
           if (!confirm("Hapus " + rows.length + " data absensi? Tindakan ini tidak bisa dibatalkan.")) return;
+          if (window.DB.hapusAbsensi && window.DB.usingEdge && window.DB.usingEdge()) {
+            const out = await window.DB.hapusAbsensi({
+              dari: document.getElementById("haDari").value,
+              sampai: document.getElementById("haSampai").value,
+              sesi: document.getElementById("haSesi").value,
+              tipe: document.getElementById("haTipe").value || undefined,
+              confirm: true,
+            });
+            window.toast((out.deleted || 0) + " data absensi dihapus");
+            document.getElementById("haInfo").innerHTML =
+              '<strong style="color:#059669">Selesai.</strong> ' + (out.deleted || 0) + " data dihapus.";
+            document.getElementById("haHapus").disabled = true;
+            matchedIds = [];
+            return;
+          }
           for (const r of rows) {
             if (r.id) await window.DB.remove("absensi", r.id);
           }
