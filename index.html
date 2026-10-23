@@ -1669,62 +1669,58 @@
       border-radius: 14px;
       border: 1px solid var(--gray-200);
       width: 100%;
-      height: 240px;
-      display: none;
+      max-width: 100%;
+      height: 42vh;
+      max-height: 320px;
+      min-height: 200px;
+      display: none; /* tersembunyi saat kamera tertutup */
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
       overflow: hidden;
       margin-bottom: 12px;
       position: relative;
     }
     .scan-cam-box.open {
-      display: block;
+      display: flex;
     }
-    .scan-cam-box.locked {
-      opacity: 0.55;
-    }
-    /* Html5Qrcode internal layout */
+    /* Cegah Html5Qrcode memenuhi seluruh layar */
+    .scan-cam-box,
+    .scan-cam-box #readerScan,
     #readerScan {
-      width: 100% !important;
-      height: 240px !important;
-      border: none !important;
-      position: relative;
+      max-height: 42vh !important;
     }
+    .scan-cam-box video,
     #readerScan video {
       width: 100% !important;
-      height: 240px !important;
+      max-height: 42vh !important;
+      height: 100% !important;
       object-fit: cover !important;
       border-radius: 14px;
     }
-    #readerScan canvas {
-      display: none !important;
+    .scan-cam-box img,
+    #readerScan img {
+      max-height: 42vh !important;
     }
-    /* Sembunyikan UI bawaan library yang merusak layout */
-    #readerScan img[alt="Info icon"],
-    #readerScan > strong,
-    #readerScan > span {
-      display: none !important;
+    .scan-cam-box > div,
+    #readerScan > div {
+      max-height: 42vh !important;
     }
+    .scan-cam-box.locked { opacity: 0.55; }
     @media (max-width: 640px) {
       .scan-cam-box {
-        height: 220px;
+        height: 38vh;
+        max-height: 280px;
+        min-height: 180px;
       }
+      .scan-cam-box,
+      .scan-cam-box #readerScan,
       #readerScan,
+      .scan-cam-box video,
       #readerScan video {
-        height: 220px !important;
+        max-height: 38vh !important;
       }
     }
-    @media (min-width: 768px) {
-      .scan-cam-box {
-        height: 280px;
-        max-width: 480px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      #readerScan,
-      #readerScan video {
-        height: 280px !important;
-      }
-    }
-
     .scan-history-card .data-table,
     .scan-history-card .scan-log-table {
       font-size: 11.5px;
@@ -5168,25 +5164,21 @@ window.initCrudPage = function (opts) {
       if (window._scanState.scanning) return;
       const box = document.getElementById(readerId);
       box.classList.add("open");
-      box.style.display = "block";
+      box.style.display = "flex";
       box.innerHTML = "";
-      // pastikan elemen punya ukuran sebelum library init
-      box.style.height = window.innerWidth <= 640 ? "220px" : "240px";
-      const scanner = new Html5Qrcode(readerId, { verbose: false });
+      const scanner = new Html5Qrcode(readerId);
       window._scanState.scanner = scanner;
       try {
         await scanner.start(
           { facingMode: "environment" },
           {
             fps: 30,
-            qrbox: { width: 200, height: 200 },
+            qrbox: function (viewW, viewH) {
+              const s = Math.floor(Math.min(viewW, viewH) * 0.65);
+              return { width: Math.max(180, s), height: Math.max(180, s) };
+            },
             aspectRatio: 1.0,
             disableFlip: false,
-            videoConstraints: {
-              facingMode: "environment",
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
           },
           function (decoded) {
             // Jangan pause kamera — proses async agar tetap responsif
