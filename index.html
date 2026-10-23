@@ -1605,92 +1605,135 @@
 
 
     /* ===== SCAN BARCODE (peran) ===== */
-    .scan-fp-btn {
-      width: 100%;
-      padding: 14px 16px;
-      border: none;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
+    .scan-panel { max-width: 640px; margin: 0 auto; }
+    .scan-top-bar {
       display: flex;
-      align-items: center;
-      justify-content: center;
       gap: 10px;
       margin-bottom: 14px;
-      transition: filter .15s, transform .15s;
+      flex-wrap: wrap;
     }
-    .scan-fp-btn:active { transform: scale(0.98); }
-    .scan-fp-btn.fp-register {
-      background: linear-gradient(135deg, #ef4444, #b91c1c);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(239,68,68,.35);
-    }
-    .scan-fp-btn.fp-absen {
-      background: linear-gradient(135deg, #2563eb, #1e40af);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(37,99,235,.35);
-    }
-    .scan-fp-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      filter: none;
-    }
-    .scan-target-switch {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .scan-target-switch .tgt-btn {
+    .scan-top-bar .scan-btn {
       flex: 1;
-      border: 2px solid var(--gray-200);
+      min-width: 140px;
+      border: 1px solid var(--gray-200);
       background: #fff;
-      color: var(--gray-600);
-      padding: 12px 10px;
+      color: var(--gray-700);
+      padding: 12px 14px;
       border-radius: 12px;
       font-size: 13.5px;
       font-weight: 700;
       cursor: pointer;
       font-family: inherit;
-      transition: all .15s;
-    }
-    .scan-target-switch .tgt-btn.active-siswa {
-      background: linear-gradient(135deg, #2563eb, #1e40af);
-      color: #fff;
-      border-color: #1e40af;
-    }
-    .scan-target-switch .tgt-btn.active-guru {
-      background: linear-gradient(135deg, #2563eb, #1e40af);
-      color: #fff;
-      border-color: #1e40af;
-    }
-    .scan-target-switch .tgt-btn.inactive {
-      background: #fee2e2;
-      color: #b91c1c;
-      border-color: #fca5a5;
-    }
-    .scan-session-badge {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all .15s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .scan-top-bar .scan-btn:hover { background: var(--blue-50); border-color: var(--blue-200); }
+    .scan-top-bar .scan-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: none;
+    }
+    .scan-top-bar .scan-btn.fp-register {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(239,68,68,.3);
+    }
+    .scan-top-bar .scan-btn.fp-absen {
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(37,99,235,.3);
+    }
+    .scan-top-bar .scan-btn.cam-on {
+      background: linear-gradient(135deg, #059669, #047857);
+      color: #fff;
+      border-color: transparent;
+    }
+    .scan-top-bar .scan-btn.tgt-siswa {
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      color: #fff;
+      border-color: transparent;
+    }
+    .scan-top-bar .scan-btn.tgt-guru {
+      background: linear-gradient(135deg, #7c3aed, #5b21b6);
+      color: #fff;
+      border-color: transparent;
+    }
+    .scan-cam-box {
+      background: #0f172a;
+      border-radius: 14px;
+      border: 1px solid var(--gray-200);
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      overflow: hidden;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .scan-cam-box video { width: 100% !important; border-radius: 14px; }
+    .scan-cam-box.locked { opacity: 0.55; }
+    .scan-manual {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .scan-manual input {
+      flex: 1;
+      min-width: 140px;
+      padding: 10px 12px;
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .scan-sesi-tabs {
+      display: flex;
+      flex-wrap: wrap;
       gap: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 6px 12px;
+      margin-bottom: 12px;
+    }
+    .scan-sesi-tabs .sesi-tab {
+      border: 1px solid var(--blue-200);
+      background: #fff;
+      color: var(--blue-700);
+      padding: 8px 14px;
       border-radius: 999px;
-      margin-bottom: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
     }
-    .scan-session-badge.on {
-      background: #d1fae5;
-      color: #065f46;
+    .scan-sesi-tabs .sesi-tab.active {
+      background: #1e40af;
+      color: #fff;
+      border-color: #1e40af;
     }
-    .scan-session-badge.off {
-      background: #fee2e2;
-      color: #991b1b;
+    .scan-sesi-tabs .sesi-tab.all-tab.active {
+      background: #0f172a;
+      border-color: #0f172a;
     }
-    .scan-cam-locked {
-      opacity: 0.55;
-      pointer-events: none;
+    .scan-history-card {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid var(--gray-200);
+      padding: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .scan-history-card h3 {
+      font-size: 14px;
+      color: var(--blue-800);
+      margin: 0 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .scan-popup-overlay {
       position: fixed;
@@ -1718,10 +1761,7 @@
       text-align: center;
       box-shadow: 0 20px 50px rgba(0,0,0,.25);
     }
-    .scan-popup .pop-icon {
-      font-size: 42px;
-      margin-bottom: 10px;
-    }
+    .scan-popup .pop-icon { font-size: 42px; margin-bottom: 10px; }
     .scan-popup .pop-title {
       font-size: 16px;
       font-weight: 700;
@@ -1736,18 +1776,9 @@
     }
     .scan-popup.ok .pop-title { color: #065f46; }
     .scan-popup.err .pop-title { color: #991b1b; }
-    .scan-log-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-    .scan-log-toolbar h3 {
-      font-size: 14px;
-      color: var(--blue-800);
-      margin: 0;
+    @media (max-width: 640px) {
+      .scan-panel { margin: 0 4px; }
+      .scan-top-bar .scan-btn { font-size: 12.5px; padding: 11px 10px; }
     }
 
     /* ===== LOGIN ===== */
@@ -4644,7 +4675,8 @@ window.initCrudPage = function (opts) {
     const role = session ? session.role : "guest";
     const isAdmin = role === "admin";
     const isGuru = role === "guru";
-    let scanTarget = mode === "siswa" ? "siswa" : isAdmin ? "siswa" : "siswa";
+    // Admin: toggle target; Guru: selalu siswa
+    let scanTarget = "siswa";
 
     let cfg = {
       jam_buka_masuk: "06:00",
@@ -4676,18 +4708,34 @@ window.initCrudPage = function (opts) {
     function detectSesi() {
       const m = toMin(nowHM());
       if (cfg.sesi1_aktif && m >= toMin(cfg.jam_buka_masuk) && m <= toMin(cfg.batas_scan_masuk))
-        return { sesi: "Masuk", status: m <= toMin(cfg.batas_tepat_waktu) ? "TW" : "TL", label: "Sesi Masuk" };
+        return { sesi: "Masuk", status: m <= toMin(cfg.batas_tepat_waktu) ? "TW" : "TL", label: "Sesi 1 · Masuk", n: 1 };
       if (cfg.sesi2_aktif && m >= toMin(cfg.jam_buka_sesi2) && m <= toMin(cfg.batas_scan_sesi2))
-        return { sesi: "Sesi2", status: m <= toMin(cfg.batas_tepat_sesi2) ? "TW" : "TL", label: "Sesi Istirahat" };
+        return { sesi: "Sesi2", status: m <= toMin(cfg.batas_tepat_sesi2) ? "TW" : "TL", label: "Sesi 2 · Istirahat", n: 2 };
       if (cfg.sesi3_aktif && m >= toMin(cfg.jam_buka_pulang) && m <= toMin(cfg.jam_tutup_pulang))
-        return { sesi: "Pulang", status: m <= toMin(cfg.batas_pulang_tepat) ? "TW" : "TL", label: "Sesi Pulang" };
+        return { sesi: "Pulang", status: m <= toMin(cfg.batas_pulang_tepat) ? "TW" : "TL", label: "Sesi 3 · Pulang", n: 3 };
       return null;
     }
-    function activeSessionsToday() {
+    /** Daftar sesi aktif (dinamis dari pengaturan) */
+    function listSesiAktif() {
       const list = [];
-      if (cfg.sesi1_aktif) list.push({ key: "Masuk", label: "Masuk", open: cfg.jam_buka_masuk, close: cfg.batas_scan_masuk });
-      if (cfg.sesi2_aktif) list.push({ key: "Sesi2", label: "Istirahat", open: cfg.jam_buka_sesi2, close: cfg.batas_scan_sesi2 });
-      if (cfg.sesi3_aktif) list.push({ key: "Pulang", label: "Pulang", open: cfg.jam_buka_pulang, close: cfg.jam_tutup_pulang });
+      if (cfg.sesi1_aktif !== false)
+        list.push({ key: "Masuk", label: "Sesi 1", sub: "Masuk", open: cfg.jam_buka_masuk, close: cfg.batas_scan_masuk });
+      if (cfg.sesi2_aktif !== false)
+        list.push({ key: "Sesi2", label: "Sesi 2", sub: "Istirahat", open: cfg.jam_buka_sesi2, close: cfg.batas_scan_sesi2 });
+      if (cfg.sesi3_aktif !== false)
+        list.push({ key: "Pulang", label: "Sesi 3", sub: "Pulang", open: cfg.jam_buka_pulang, close: cfg.jam_tutup_pulang });
+      // sesi tambahan dari pengaturan (sesi4_aktif …)
+      for (let i = 4; i <= 12; i++) {
+        if (cfg["sesi" + i + "_aktif"]) {
+          list.push({
+            key: "Sesi" + i,
+            label: "Sesi " + i,
+            sub: cfg["sesi" + i + "_nama"] || ("Sesi " + i),
+            open: cfg["jam_buka_sesi" + i] || "",
+            close: cfg["batas_scan_sesi" + i] || "",
+          });
+        }
+      }
       return list;
     }
 
@@ -4711,110 +4759,99 @@ window.initCrudPage = function (opts) {
     const readerId = "readerScan";
     const title = mode === "siswa" ? "Sidik Jari Siswa" : "Scan Barcode";
     const icon = mode === "siswa" ? "fa-fingerprint" : "fa-qrcode";
-
-    let fpBlock = "";
-    if (isGuru && mode !== "siswa") {
-      const reg = isFpRegistered();
-      fpBlock =
-        '<button type="button" class="scan-fp-btn ' +
-        (reg ? "fp-absen" : "fp-register") +
-        '" id="btnSidikJari">' +
-        '<i class="fas fa-fingerprint"></i> ' +
-        (reg ? "Absen Sidik Jari" : "Daftarkan Sidik Jari") +
-        "</button>";
-    }
-
-    let switchBlock = "";
-    if (isAdmin && mode !== "siswa") {
-      switchBlock =
-        '<div class="scan-target-switch">' +
-        '<button type="button" class="tgt-btn active-siswa" id="tgtSiswa"><i class="fas fa-user-graduate"></i> Siswa</button>' +
-        '<button type="button" class="tgt-btn inactive" id="tgtGuru"><i class="fas fa-user-tie"></i> Guru</button>' +
-        "</div>";
-    }
-
     const sesiNow = detectSesi();
     const sesiAktif = !!sesiNow;
-    const lockCam = isGuru && !sesiAktif;
+    const lockCam = isGuru && mode !== "siswa" && !sesiAktif;
+    const sessions = listSesiAktif();
 
-    const statusBadge =
-      isGuru && mode !== "siswa"
-        ? '<div class="scan-session-badge ' +
-          (sesiAktif ? "on" : "off") +
-          '" id="sesiBadge">' +
-          (sesiAktif
-            ? '<i class="fas fa-circle" style="font-size:8px"></i> Sesi aktif: ' + sesiNow.label
-            : '<i class="fas fa-lock"></i> Tidak ada sesi aktif — kamera dikunci') +
-          "</div>"
-        : "";
+    // Tombol kiri: sidik jari (guru) ATAU toggle Guru/Siswa (admin)
+    let leftBtn = "";
+    if (isGuru && mode !== "siswa") {
+      const reg = isFpRegistered();
+      leftBtn =
+        '<button type="button" class="scan-btn ' +
+        (reg ? "fp-absen" : "fp-register") +
+        '" id="btnSidikJari"><i class="fas fa-fingerprint"></i> ' +
+        (reg ? "Absen Sidik Jari" : "Daftar Sidik Jari") +
+        "</button>";
+    } else if (isAdmin && mode !== "siswa") {
+      leftBtn =
+        '<button type="button" class="scan-btn tgt-siswa" id="btnToggleTarget"><i class="fas fa-user-graduate"></i> <span id="tgtLabel">Siswa</span></button>';
+    }
+
+    const camBtnDisabled = lockCam ? " disabled" : "";
+    const topBar =
+      '<div class="scan-top-bar">' +
+      leftBtn +
+      '<button type="button" class="scan-btn" id="btnToggleCam"' +
+      camBtnDisabled +
+      '><i class="fas fa-camera"></i> <span id="camLabel">Buka / Tutup Kamera</span></button>' +
+      "</div>";
+
+    // Tab sesi dinamis
+    const sesiTabsHtml =
+      '<div class="scan-sesi-tabs" id="sesiTabs">' +
+      '<button type="button" class="sesi-tab all-tab active" data-sesi="">Semua</button>' +
+      sessions
+        .map(
+          (s) =>
+            '<button type="button" class="sesi-tab" data-sesi="' +
+            s.key +
+            '">' +
+            s.label +
+            (s.sub ? " · " + s.sub : "") +
+            "</button>"
+        )
+        .join("") +
+      "</div>";
 
     main.innerHTML =
       '<div class="page-toolbar"><h1 class="page-title"><i class="fas ' +
       icon +
       '"></i> ' +
       title +
+      (isAdmin && mode !== "siswa" ? " · Admin" : isGuru && mode !== "siswa" ? " · Guru" : "") +
       "</h1></div>" +
       '<div class="scan-panel">' +
-      fpBlock +
-      switchBlock +
-      statusBadge +
-      '<div class="section-card' +
-      (lockCam ? " scan-cam-locked" : "") +
-      '" style="padding:12px" id="camCard">' +
-      '<div class="camera-controls">' +
-      '<button type="button" class="btn btn-primary" id="btnStartCam"' +
-      (lockCam ? " disabled" : "") +
-      '><i class="fas fa-camera"></i> Buka Kamera</button>' +
-      '<button type="button" class="btn btn-secondary" id="btnStopCam" disabled><i class="fas fa-stop"></i> Tutup</button></div>' +
-      '<div id="' +
+      topBar +
+      (lockCam
+        ? '<p style="font-size:12px;color:#b91c1c;margin:0 0 10px"><i class="fas fa-lock"></i> Tidak ada sesi aktif — kamera dikunci</p>'
+        : "") +
+      '<div class="scan-cam-box' +
+      (lockCam ? " locked" : "") +
+      '" id="' +
       readerId +
-      '"><span style="font-size:13px;color:#94a3b8">Kamera non-aktif</span></div>' +
-      '<div class="manual-scan"><input type="text" id="manualKode" placeholder="Ketik kode barcode" ' +
+      '"><span style="font-size:13px">KAMERA SCANNER</span></div>' +
+      '<div class="scan-manual"><input type="text" id="manualKode" placeholder="Ketik kode barcode" ' +
       (lockCam ? "disabled " : "") +
       "/>" +
       '<button type="button" class="btn btn-primary" id="btnManual"' +
       (lockCam ? " disabled" : "") +
-      '><i class="fas fa-check"></i> Absen</button></div></div>' +
-      '<div class="section-card scan-today" style="padding:12px;margin-top:12px">' +
-      '<div class="scan-log-toolbar">' +
-      "<h3><i class=\"fas fa-list\"></i> Riwayat scan hari ini</h3>" +
-      '<button type="button" class="btn btn-secondary" id="btnLogAllSesi" style="font-size:12px;padding:7px 12px"><i class="fas fa-layer-group"></i> Semua sesi hari ini</button>' +
-      "</div>" +
-      '<div class="table-wrapper"><table class="data-table"><thead><tr id="absenHead"></tr></thead>' +
-      '<tbody id="absenTodayBody"><tr><td colspan="8" style="text-align:center;color:#64748b;padding:16px">Memuat…</td></tr></tbody></table></div></div></div>';
+      '><i class="fas fa-check"></i> Absen</button></div>' +
+      '<div class="scan-history-card">' +
+      "<h3><i class=\"fas fa-list\"></i> Tabel Riwayat Scan</h3>" +
+      sesiTabsHtml +
+      '<div class="table-wrapper"><table class="data-table"><thead><tr>' +
+      "<th>No</th><th>Kode</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Sesi</th><th>Status</th><th>Jam</th>" +
+      '</tr></thead><tbody id="absenTodayBody">' +
+      '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:16px">Memuat…</td></tr>' +
+      "</tbody></table></div></div></div>";
 
-    let logFilterSesi = null;
-
-    function headHtml() {
-      const showScanner = isAdmin;
-      let h =
-        "<th>No</th><th>Kode</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Sesi</th><th>Status</th><th>Jam</th>";
-      if (showScanner) h += "<th>Di-scan oleh</th>";
-      return h;
-    }
-    document.getElementById("absenHead").innerHTML = headHtml();
+    let logFilterSesi = ""; // "" = semua
 
     async function loadToday() {
       const today = new Date().toISOString().slice(0, 10);
       const body = document.getElementById("absenTodayBody");
-      const showScanner = isAdmin;
-      const colSpan = showScanner ? 9 : 8;
       try {
         const res = await window.DB.list("absensi");
         let rows = (res.data || []).filter((r) => r.tanggal === today);
-        if (isGuru) {
-          rows = rows.filter((r) => r.tipe === "siswa");
-        }
-        if (logFilterSesi) {
-          rows = rows.filter((r) => r.sesi === logFilterSesi);
-        }
+        if (isGuru) rows = rows.filter((r) => r.tipe === "siswa");
+        if (logFilterSesi) rows = rows.filter((r) => r.sesi === logFilterSesi);
         rows.sort((a, b) => String(b.jam_scan || "").localeCompare(String(a.jam_scan || "")));
         if (!rows.length) {
           body.innerHTML =
-            '<tr><td colspan="' +
-            colSpan +
-            '" style="text-align:center;color:#64748b;padding:16px">Belum ada absensi' +
-            (logFilterSesi ? " untuk sesi ini" : "") +
+            '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:16px">Belum ada absensi' +
+            (logFilterSesi ? " di sesi ini" : "") +
             "</td></tr>";
           return;
         }
@@ -4827,7 +4864,7 @@ window.initCrudPage = function (opts) {
                   second: "2-digit",
                 })
               : "—";
-            let tr =
+            return (
               "<tr><td>" +
               (i + 1) +
               "</td><td>" +
@@ -4844,20 +4881,25 @@ window.initCrudPage = function (opts) {
               (r.status || "—") +
               "</strong></td><td>" +
               jam +
-              "</td>";
-            if (showScanner) tr += "<td>" + (r.scanner_nama || r.scanner_by || "—") + "</td>";
-            return tr + "</tr>";
+              "</td></tr>"
+            );
           })
           .join("");
       } catch (e) {
         body.innerHTML =
-          '<tr><td colspan="' +
-          colSpan +
-          '" style="text-align:center;color:#b91c1c">Gagal: ' +
-          (e.message || e) +
-          "</td></tr>";
+          '<tr><td colspan="8" style="text-align:center;color:#b91c1c">Gagal: ' + (e.message || e) + "</td></tr>";
       }
     }
+
+    // Tab sesi
+    document.querySelectorAll("#sesiTabs .sesi-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#sesiTabs .sesi-tab").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        logFilterSesi = btn.getAttribute("data-sesi") || "";
+        loadToday();
+      });
+    });
 
     function scannerMeta() {
       if (!session) return { scanner_id: null, scanner_nama: "Sistem", scanner_role: "guest" };
@@ -4869,23 +4911,21 @@ window.initCrudPage = function (opts) {
     }
 
     async function processKode(raw) {
-      const text = String(raw || "").trim();
-      if (!text || window._scanState.processing) return;
+      const textKode = String(raw || "").trim();
+      if (!textKode || window._scanState.processing) return;
       window._scanState.processing = true;
       try {
         const sesiInfo = detectSesi();
         if (!sesiInfo) {
-          window._scanPopup(false, "Di luar jam absensi", "Tidak ada sesi aktif saat ini. Kamera tidak dapat memproses absensi.");
+          window._scanPopup(false, "Di luar jam absensi", "Tidak ada sesi aktif saat ini.");
           return;
         }
-
         let target = scanTarget;
-        if (isGuru) target = "siswa";
-        if (mode === "siswa") target = "siswa";
+        if (isGuru || mode === "siswa") target = "siswa";
 
         if (window.DB.usingEdge && window.DB.usingEdge()) {
-          const out = await window.DB.absen(target, text);
-          window._scanPopup(true, "Absensi berhasil", out.message || text);
+          const out = await window.DB.absen(target, textKode);
+          window._scanPopup(true, "Absensi berhasil", out.message || textKode);
           loadToday();
           return;
         }
@@ -4894,14 +4934,14 @@ window.initCrudPage = function (opts) {
         if (target === "siswa") {
           const res = await window.DB.list("data_siswa");
           person = (res.data || []).find(
-            (s) => String(s.nisn || "") === text || String(s.nsin || "") === text
+            (s) => String(s.nisn || "") === textKode || String(s.nsin || "") === textKode
           );
-          if (!person) throw new Error("Siswa dengan kode " + text + " tidak ditemukan");
+          if (!person) throw new Error("Siswa dengan kode " + textKode + " tidak ditemukan");
         } else {
           if (isGuru) throw new Error("Guru hanya dapat memindai barcode siswa");
           const res = await window.DB.list("data_guru");
-          person = (res.data || []).find((g) => String(g.nip || "") === text);
-          if (!person) throw new Error("Guru NIP " + text + " tidak ditemukan");
+          person = (res.data || []).find((g) => String(g.nip || "") === textKode);
+          if (!person) throw new Error("Guru NIP " + textKode + " tidak ditemukan");
         }
 
         const today = new Date().toISOString().slice(0, 10);
@@ -4910,14 +4950,14 @@ window.initCrudPage = function (opts) {
           (a) =>
             a.tanggal === today &&
             a.tipe === target &&
-            a.kode === text &&
+            a.kode === textKode &&
             a.sesi === sesiInfo.sesi
         );
         if (exist) {
           window._scanPopup(
             false,
             "Sudah absen",
-            (person.nama || text) + " sudah absen " + sesiInfo.sesi + " (" + exist.status + ")"
+            (person.nama || textKode) + " sudah absen " + sesiInfo.sesi + " (" + exist.status + ")"
           );
           return;
         }
@@ -4927,7 +4967,7 @@ window.initCrudPage = function (opts) {
           tanggal: today,
           tipe: target,
           ref_id: person.id,
-          kode: text,
+          kode: textKode,
           nama: person.nama,
           kelas: target === "siswa" ? person.kelas || null : null,
           sesi: sesiInfo.sesi,
@@ -4941,11 +4981,7 @@ window.initCrudPage = function (opts) {
         if (window.DB.invalidate) window.DB.invalidate("absensi");
 
         const label =
-          sesiInfo.status === "TW"
-            ? "Tepat Waktu"
-            : sesiInfo.status === "TL"
-              ? "Terlambat"
-              : sesiInfo.status;
+          sesiInfo.status === "TW" ? "Tepat Waktu" : sesiInfo.status === "TL" ? "Terlambat" : sesiInfo.status;
         window._scanPopup(
           true,
           "Absensi berhasil",
@@ -4962,27 +4998,23 @@ window.initCrudPage = function (opts) {
     }
 
     async function startCam() {
-      if (isGuru && !detectSesi()) {
-        window._scanPopup(false, "Kamera dikunci", "Tidak ada sesi aktif. Tidak dapat membuka kamera.");
+      if (isGuru && mode !== "siswa" && !detectSesi()) {
+        window._scanPopup(false, "Kamera dikunci", "Tidak ada sesi aktif.");
         return;
       }
       if (typeof Html5Qrcode === "undefined") {
-        window._scanPopup(false, "Library kamera", "Library kamera belum termuat. Muat ulang halaman.");
+        window._scanPopup(false, "Library kamera", "Library kamera belum termuat.");
         return;
       }
       if (window._scanState.scanning) return;
-      document.getElementById(readerId).innerHTML = "";
+      const box = document.getElementById(readerId);
+      box.innerHTML = "";
       const scanner = new Html5Qrcode(readerId);
       window._scanState.scanner = scanner;
       try {
         await scanner.start(
           { facingMode: "environment" },
-          {
-            fps: 28,
-            qrbox: { width: 240, height: 240 },
-            aspectRatio: 1.0,
-            disableFlip: false,
-          },
+          { fps: 28, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0, disableFlip: false },
           async function (decoded) {
             if (window._scanState.processing) return;
             try {
@@ -4998,7 +5030,11 @@ window.initCrudPage = function (opts) {
           function () {}
         );
         window._scanState.scanning = true;
-        document.getElementById("btnStopCam").disabled = false;
+        const btn = document.getElementById("btnToggleCam");
+        if (btn) {
+          btn.classList.add("cam-on");
+          document.getElementById("camLabel").textContent = "Tutup Kamera";
+        }
       } catch (e) {
         window._scanPopup(false, "Gagal buka kamera", String(e));
       }
@@ -5009,26 +5045,37 @@ window.initCrudPage = function (opts) {
         if (window._scanState.scanner && window._scanState.scanning) await window._scanState.scanner.stop();
       } catch (e) {}
       window._scanState.scanning = false;
-      const stopBtn = document.getElementById("btnStopCam");
-      if (stopBtn) stopBtn.disabled = true;
       const el = document.getElementById(readerId);
-      if (el) el.innerHTML = '<span style="font-size:13px;color:#94a3b8">Kamera non-aktif</span>';
+      if (el) el.innerHTML = '<span style="font-size:13px">KAMERA SCANNER</span>';
+      const btn = document.getElementById("btnToggleCam");
+      if (btn) {
+        btn.classList.remove("cam-on");
+        const lab = document.getElementById("camLabel");
+        if (lab) lab.textContent = "Buka / Tutup Kamera";
+      }
     }
 
+    // Toggle kamera: 1 klik buka, 2 klik tutup
+    document.getElementById("btnToggleCam").onclick = async function () {
+      if (window._scanState.scanning) await stopCam();
+      else await startCam();
+    };
+
+    // Sidik jari guru
     const btnFp = document.getElementById("btnSidikJari");
     if (btnFp) {
       btnFp.onclick = async function () {
         if (!isFpRegistered()) {
           if (!confirm("Daftarkan sidik jari perangkat ini untuk absensi Anda?")) return;
           setFpRegistered();
-          btnFp.className = "scan-fp-btn fp-absen";
+          btnFp.className = "scan-btn fp-absen";
           btnFp.innerHTML = '<i class="fas fa-fingerprint"></i> Absen Sidik Jari';
-          window._scanPopup(true, "Sidik jari terdaftar", "Sekarang Anda dapat absen dengan tombol Absen Sidik Jari.");
+          window._scanPopup(true, "Sidik jari terdaftar", "Gunakan tombol Absen Sidik Jari untuk absen.");
           return;
         }
         const sesiInfo = detectSesi();
         if (!sesiInfo) {
-          window._scanPopup(false, "Di luar jam absensi", "Tidak ada sesi aktif untuk absensi sidik jari.");
+          window._scanPopup(false, "Di luar jam absensi", "Tidak ada sesi aktif.");
           return;
         }
         try {
@@ -5073,55 +5120,22 @@ window.initCrudPage = function (opts) {
       };
     }
 
-    const btnTgtSiswa = document.getElementById("tgtSiswa");
-    const btnTgtGuru = document.getElementById("tgtGuru");
-    function syncTargetUI() {
-      if (!btnTgtSiswa || !btnTgtGuru) return;
-      if (scanTarget === "siswa") {
-        btnTgtSiswa.className = "tgt-btn active-siswa";
-        btnTgtGuru.className = "tgt-btn inactive";
-      } else {
-        btnTgtGuru.className = "tgt-btn active-guru";
-        btnTgtSiswa.className = "tgt-btn inactive";
-      }
-    }
-    if (btnTgtSiswa) {
-      btnTgtSiswa.onclick = function () {
-        scanTarget = "siswa";
-        syncTargetUI();
-      };
-    }
-    if (btnTgtGuru) {
-      btnTgtGuru.onclick = function () {
-        scanTarget = "guru";
-        syncTargetUI();
+    // Admin: 1 klik = Siswa, 2 klik = Guru (toggle)
+    const btnTgt = document.getElementById("btnToggleTarget");
+    if (btnTgt) {
+      btnTgt.onclick = function () {
+        scanTarget = scanTarget === "siswa" ? "guru" : "siswa";
+        const lab = document.getElementById("tgtLabel");
+        if (scanTarget === "siswa") {
+          btnTgt.className = "scan-btn tgt-siswa";
+          btnTgt.innerHTML = '<i class="fas fa-user-graduate"></i> <span id="tgtLabel">Siswa</span>';
+        } else {
+          btnTgt.className = "scan-btn tgt-guru";
+          btnTgt.innerHTML = '<i class="fas fa-user-tie"></i> <span id="tgtLabel">Guru</span>';
+        }
       };
     }
 
-    document.getElementById("btnLogAllSesi").onclick = function () {
-      const sessions = activeSessionsToday();
-      const choice = prompt(
-        "Filter sesi hari ini (kosongkan = semua):\n" +
-          sessions.map((s, i) => i + 1 + ". " + s.key + " — " + s.label).join("\n") +
-          "\n\nKetik nomor sesi atau nama kunci (Masuk/Sesi2/Pulang), atau ALL:",
-        logFilterSesi || "ALL"
-      );
-      if (choice == null) return;
-      const c = String(choice).trim();
-      if (!c || /^all$/i.test(c)) {
-        logFilterSesi = null;
-      } else if (/^\d+$/.test(c)) {
-        const idx = parseInt(c, 10) - 1;
-        logFilterSesi = sessions[idx] ? sessions[idx].key : null;
-      } else {
-        const hit = sessions.find((s) => s.key.toLowerCase() === c.toLowerCase() || s.label.toLowerCase() === c.toLowerCase());
-        logFilterSesi = hit ? hit.key : c;
-      }
-      loadToday();
-    };
-
-    document.getElementById("btnStartCam").onclick = startCam;
-    document.getElementById("btnStopCam").onclick = stopCam;
     document.getElementById("btnManual").onclick = function () {
       processKode(document.getElementById("manualKode").value);
     };
