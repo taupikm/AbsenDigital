@@ -2041,9 +2041,7 @@
         <a href="#" class="menu-item"><i class="fas fa-hand-pointer icon-purple"></i> Izin Sidik Jari & Ujian</a>
         <a href="#" class="menu-item"><i class="fas fa-box-archive icon-amber"></i> Arsip Absensi</a>
         <a href="#" class="menu-item"><i class="fas fa-arrow-up-right-dots icon-cyan"></i> Naik Kelas & Kelulusan</a>
-        <a href="#/reset-pin-admin" class="menu-item" data-page="reset-pin-admin"><i class="fas fa-key icon-red"></i> Reset PIN Admin</a>
-        <a href="#/reset-pin-guru" class="menu-item" data-page="reset-pin-guru"><i class="fas fa-user-lock icon-orange"></i> Reset PIN Guru</a>
-        <a href="#/proteksi-periode" class="menu-item" data-page="proteksi-periode"><i class="fas fa-shield-alt icon-indigo"></i> Proteksi Periode</a>
+        <a href="#/keamanan" class="menu-item" data-page="keamanan"><i class="fas fa-shield-alt icon-red"></i> Keamanan & Periode</a>
         <a href="#" class="menu-item"><i class="fas fa-id-card icon-pink"></i> Edit Profil User</a>
         <a href="#" class="menu-item"><i class="fas fa-school icon-blue"></i> Data Sekolah</a>
         <a href="#" class="menu-item"><i class="fab fa-google-drive icon-green"></i> Integrasi GDrive</a>
@@ -4805,147 +4803,207 @@ window.initCrudPage = function (opts) {
     });
   }
 
-  // ========== ADMIN: Reset PIN & Proteksi Periode ==========
-  window.initResetPinAdminPage = async function () {
-    const main = document.getElementById("main-content");
-    if (!main) return;
-    main.classList.add("crud-page");
-    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
-    document.querySelector('.menu-item[data-page="reset-pin-admin"]')?.classList.add("active");
-    const cur = await getAdminPin();
-    main.innerHTML =
-      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-key"></i> Reset PIN Admin</h1></div>' +
-      '<div class="filter-form" style="max-width:420px">' +
-      '<div class="ff-row"><span class="ff-label">PIN saat ini</span><input type="password" id="pinOld" placeholder="6 digit" maxlength="6" /></div>' +
-      '<div class="ff-row"><span class="ff-label">PIN baru</span><input type="password" id="pinNew" placeholder="6 digit" maxlength="6" /></div>' +
-      '<div class="ff-row"><span class="ff-label">Ulangi PIN</span><input type="password" id="pinNew2" placeholder="6 digit" maxlength="6" /></div>' +
-      '<div class="ff-actions"><button type="button" class="btn btn-primary" id="btnSaveAdminPin" style="grid-column:1/-1"><i class="fas fa-save"></i> Simpan PIN Admin</button></div>' +
-      '<p style="font-size:12px;color:#64748b;margin-top:10px">PIN admin harus 6 digit angka. Default awal: 999999</p></div>';
-    document.getElementById("btnSaveAdminPin").onclick = async () => {
-      const oldP = (document.getElementById("pinOld").value || "").trim();
-      const n1 = (document.getElementById("pinNew").value || "").trim();
-      const n2 = (document.getElementById("pinNew2").value || "").trim();
-      if (oldP !== cur) return window.toast("PIN saat ini salah", "error");
-      if (!/^\d{6}$/.test(n1)) return window.toast("PIN baru harus 6 digit", "error");
-      if (n1 !== n2) return window.toast("Ulangi PIN tidak sama", "error");
-      try {
-        let list = [];
-        try {
-          list = ((await window.DB.list("admin_akun")).data) || [];
-        } catch (e) { list = []; }
-        if (list[0]) {
-          await window.DB.update("admin_akun", list[0].id, { pin: n1, updated_at: new Date().toISOString() });
-        } else {
-          await window.DB.create("admin_akun", { nama: "Administrator", pin: n1 });
-        }
-        if (window.APP_CONFIG) window.APP_CONFIG.ADMIN_PIN = n1;
-        window.toast("PIN Admin berhasil diubah");
-      } catch (e) {
-        // fallback localStorage jika tabel belum ada
-        localStorage.setItem("sis_admin_pin", n1);
-        if (window.APP_CONFIG) window.APP_CONFIG.ADMIN_PIN = n1;
-        window.toast("PIN Admin disimpan (lokal). Jalankan SQL admin_akun untuk sync cloud.");
-      }
-    };
-  };
 
-  window.initResetPinGuruPage = async function () {
+  // ========== KEAMANAN & PERIODE (tab: PIN Admin | PIN Guru | Proteksi) ==========
+  window.initKeamananPage = async function (startTab) {
     const main = document.getElementById("main-content");
     if (!main) return;
     main.classList.add("crud-page");
     document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
-    document.querySelector('.menu-item[data-page="reset-pin-guru"]')?.classList.add("active");
-    const res = await window.DB.list("data_guru").catch(() => ({ data: [] }));
-    const gurus = res.data || [];
-    main.innerHTML =
-      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-user-lock"></i> Reset PIN Guru</h1></div>' +
-      '<div class="filter-form">' +
-      '<div class="ff-row"><span class="ff-label">Pilih Guru</span><select id="rpgGuru"><option value="">— pilih —</option>' +
-      gurus.map((g) => '<option value="' + g.id + '">' + (g.nama || "") + (g.nip ? " · " + g.nip : "") + "</option>").join("") +
-      '</select></div>' +
-      '<div class="ff-row"><span class="ff-label">PIN baru</span><input type="text" id="rpgPin" placeholder="6 digit" maxlength="6" inputmode="numeric" /></div>' +
-      '<div class="ff-actions"><button type="button" class="btn btn-primary" id="btnRpgSave" style="grid-column:1/-1"><i class="fas fa-save"></i> Reset PIN</button></div>' +
-      '<p style="font-size:12px;color:#64748b;margin-top:8px">PIN guru harus 6 digit. Dipakai untuk login.</p></div>' +
-      '<div class="section-card" style="margin-top:12px"><div class="table-wrapper"><table class="data-table"><thead><tr><th>No</th><th>Nama</th><th>NIP</th><th>PIN</th></tr></thead><tbody>' +
-      (gurus.length
-        ? gurus.map((g, i) => "<tr><td>" + (i + 1) + "</td><td>" + (g.nama || "—") + "</td><td>" + (g.nip || "—") + "</td><td>" + (g.pin ? "******" : "<em>belum</em>") + "</td></tr>").join("")
-        : '<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b">Belum ada data guru</td></tr>') +
-      "</tbody></table></div></div>";
-    document.getElementById("btnRpgSave").onclick = async () => {
-      const id = document.getElementById("rpgGuru").value;
-      const pin = (document.getElementById("rpgPin").value || "").trim();
-      if (!id) return window.toast("Pilih guru", "error");
-      if (!/^\d{6}$/.test(pin)) return window.toast("PIN harus 6 digit angka", "error");
-      try {
-        await window.DB.update("data_guru", id, { pin: pin });
-        window.toast("PIN guru diperbarui");
-        window.initResetPinGuruPage();
-      } catch (e) {
-        window.toast(String(e.message || e), "error");
-      }
-    };
-  };
+    document.querySelector('.menu-item[data-page="keamanan"]')?.classList.add("active");
 
-  window.initProteksiPeriodePage = async function () {
-    const main = document.getElementById("main-content");
-    if (!main) return;
-    main.classList.add("crud-page");
-    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
-    document.querySelector('.menu-item[data-page="proteksi-periode"]')?.classList.add("active");
-    const res = await window.DB.list("periode").catch(() => ({ data: [] }));
-    const rows = res.data || [];
+    let tab = startTab || "pin-admin";
+
     main.innerHTML =
-      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-shield-alt"></i> Proteksi Periode</h1></div>' +
-      '<p style="font-size:13px;color:#64748b;margin:0 6px 12px">Periode terkunci tidak bisa diubah/dihapus (kecuali dibuka lagi oleh admin).</p>' +
-      '<div class="section-card"><div class="table-wrapper"><table class="data-table"><thead><tr>' +
-      "<th>No</th><th>Tahun Ajaran</th><th>Semester</th><th>Status</th><th>Proteksi</th><th>Aksi</th></tr></thead><tbody id=" +
-      '"ppBody"></tbody></table></div></div>';
-    const body = document.getElementById("ppBody");
-    if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Belum ada periode</td></tr>';
-      return;
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-shield-alt"></i> Keamanan & Periode</h1></div>' +
+      '<div class="tabs-bar">' +
+      '<button type="button" class="tab-btn" data-tab="pin-admin">PIN Admin</button>' +
+      '<button type="button" class="tab-btn" data-tab="pin-guru">PIN Guru</button>' +
+      '<button type="button" class="tab-btn" data-tab="proteksi">Proteksi Periode</button>' +
+      '</div><div id="keamananHost"></div>';
+
+    main.querySelectorAll(".tab-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.tab === tab);
+      b.addEventListener("click", () => {
+        tab = b.dataset.tab;
+        main.querySelectorAll(".tab-btn").forEach((x) => x.classList.toggle("active", x.dataset.tab === tab));
+        mount();
+      });
+    });
+
+    async function mount() {
+      const host = document.getElementById("keamananHost");
+      if (!host) return;
+      if (tab === "pin-admin") await renderPinAdmin(host);
+      else if (tab === "pin-guru") await renderPinGuru(host);
+      else await renderProteksi(host);
     }
-    body.innerHTML = rows
-      .map((r, i) => {
-        const locked = r.locked === true || r.locked === "true" || r.proteksi === true;
-        return (
-          "<tr><td>" +
-          (i + 1) +
-          "</td><td>" +
-          (r.tahun_ajaran || "—") +
-          "</td><td>" +
-          (r.semester || "—") +
-          "</td><td>" +
-          (r.status || "—") +
-          '</td><td><strong style="color:' +
-          (locked ? "#b91c1c" : "#059669") +
-          '">' +
-          (locked ? "Terkunci" : "Terbuka") +
-          "</strong></td><td>" +
-          '<button type="button" class="btn ' +
-          (locked ? "btn-secondary" : "btn-danger") +
-          ' btn-sm btn-pp" data-id="' +
-          r.id +
-          '" data-lock="' +
-          (locked ? "0" : "1") +
-          '">' +
-          (locked ? "Buka" : "Kunci") +
-          "</button></td></tr>"
-        );
-      })
-      .join("");
-    body.querySelectorAll(".btn-pp").forEach((b) =>
-      b.addEventListener("click", async () => {
-        const lock = b.dataset.lock === "1";
+
+    async function renderPinAdmin(host) {
+      const cur = await getAdminPin();
+      host.innerHTML =
+        '<div class="filter-form" style="max-width:440px">' +
+        '<p style="font-size:12.5px;color:#64748b;margin:0 0 12px">Ubah PIN administrator (6 digit). Dipakai saat login.</p>' +
+        '<div class="ff-row"><span class="ff-label">PIN saat ini</span><input type="password" id="pinOld" placeholder="6 digit" maxlength="6" inputmode="numeric" /></div>' +
+        '<div class="ff-row"><span class="ff-label">PIN baru</span><input type="password" id="pinNew" placeholder="6 digit" maxlength="6" inputmode="numeric" /></div>' +
+        '<div class="ff-row"><span class="ff-label">Ulangi PIN</span><input type="password" id="pinNew2" placeholder="6 digit" maxlength="6" inputmode="numeric" /></div>' +
+        '<div class="ff-actions"><button type="button" class="btn btn-primary" id="btnSaveAdminPin" style="grid-column:1/-1"><i class="fas fa-save"></i> Simpan PIN Admin</button></div>' +
+        '<p id="pinAdminHint" style="font-size:12px;color:#94a3b8;margin-top:10px">Jika tabel admin_akun belum ada, PIN disimpan lokal di browser.</p></div>';
+
+      document.getElementById("btnSaveAdminPin").onclick = async () => {
+        const oldP = (document.getElementById("pinOld").value || "").trim();
+        const n1 = (document.getElementById("pinNew").value || "").trim();
+        const n2 = (document.getElementById("pinNew2").value || "").trim();
+        if (oldP !== cur) return window.toast("PIN saat ini salah", "error");
+        if (!/^\d{6}$/.test(n1)) return window.toast("PIN baru harus 6 digit angka", "error");
+        if (n1 !== n2) return window.toast("Ulangi PIN tidak sama", "error");
         try {
-          await window.DB.update("periode", b.dataset.id, { locked: lock });
-          window.toast(lock ? "Periode dikunci" : "Periode dibuka");
-          window.initProteksiPeriodePage();
+          let list = [];
+          try {
+            list = ((await window.DB.list("admin_akun")).data) || [];
+          } catch (e) {
+            list = [];
+          }
+          if (list[0] && list[0].id) {
+            await window.DB.update("admin_akun", list[0].id, {
+              pin: n1,
+              updated_at: new Date().toISOString(),
+            });
+          } else {
+            await window.DB.create("admin_akun", { nama: "Administrator", pin: n1 });
+          }
+          localStorage.setItem("sis_admin_pin", n1);
+          if (window.APP_CONFIG) window.APP_CONFIG.ADMIN_PIN = n1;
+          window.toast("PIN Admin berhasil disimpan");
+          document.getElementById("pinOld").value = "";
+          document.getElementById("pinNew").value = "";
+          document.getElementById("pinNew2").value = "";
         } catch (e) {
-          window.toast("Gagal: " + (e.message || e) + " — pastikan kolom locked ada di tabel periode", "error");
+          localStorage.setItem("sis_admin_pin", n1);
+          if (window.APP_CONFIG) window.APP_CONFIG.ADMIN_PIN = n1;
+          window.toast("PIN Admin disimpan di browser (lokal). Agar tersimpan di cloud, jalankan SQL: 005_admin_proteksi.sql");
         }
-      })
-    );
+      };
+    }
+
+    async function renderPinGuru(host) {
+      const res = await window.DB.list("data_guru").catch(() => ({ data: [] }));
+      const gurus = res.data || [];
+      host.innerHTML =
+        '<div class="filter-form">' +
+        '<p style="font-size:12.5px;color:#64748b;margin:0 0 12px">Set PIN 6 digit untuk login guru.</p>' +
+        '<div class="ff-row"><span class="ff-label">Pilih Guru</span><select id="rpgGuru"><option value="">— pilih —</option>' +
+        gurus
+          .map(
+            (g) =>
+              '<option value="' +
+              g.id +
+              '">' +
+              (g.nama || "") +
+              (g.nip ? " · " + g.nip : "") +
+              "</option>"
+          )
+          .join("") +
+        '</select></div>' +
+        '<div class="ff-row"><span class="ff-label">PIN baru</span><input type="text" id="rpgPin" placeholder="6 digit" maxlength="6" inputmode="numeric" /></div>' +
+        '<div class="ff-actions"><button type="button" class="btn btn-primary" id="btnRpgSave" style="grid-column:1/-1"><i class="fas fa-save"></i> Simpan PIN Guru</button></div></div>' +
+        '<div class="section-card" style="margin-top:12px"><div class="table-wrapper"><table class="data-table"><thead><tr><th>No</th><th>Nama</th><th>NIP</th><th>PIN</th></tr></thead><tbody>' +
+        (gurus.length
+          ? gurus
+              .map(
+                (g, i) =>
+                  "<tr><td>" +
+                  (i + 1) +
+                  "</td><td>" +
+                  (g.nama || "—") +
+                  "</td><td>" +
+                  (g.nip || "—") +
+                  "</td><td>" +
+                  (g.pin ? "••••••" : "<em style=color:#94a3b8>belum</em>") +
+                  "</td></tr>"
+              )
+              .join("")
+          : '<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b">Belum ada data guru</td></tr>') +
+        "</tbody></table></div></div>";
+
+      document.getElementById("btnRpgSave").onclick = async () => {
+        const id = document.getElementById("rpgGuru").value;
+        const pin = (document.getElementById("rpgPin").value || "").trim();
+        if (!id) return window.toast("Pilih guru", "error");
+        if (!/^\d{6}$/.test(pin)) return window.toast("PIN harus 6 digit angka", "error");
+        try {
+          await window.DB.update("data_guru", id, { pin: pin });
+          window.toast("PIN guru diperbarui");
+          tab = "pin-guru";
+          mount();
+        } catch (e) {
+          window.toast(String(e.message || e), "error");
+        }
+      };
+    }
+
+    async function renderProteksi(host) {
+      const res = await window.DB.list("periode").catch(() => ({ data: [] }));
+      const rows = res.data || [];
+      host.innerHTML =
+        '<p style="font-size:13px;color:#64748b;margin:0 6px 12px">Periode <strong>terkunci</strong> tidak bisa diubah/dihapus sampai dibuka lagi.</p>' +
+        '<div class="section-card"><div class="table-wrapper"><table class="data-table"><thead><tr>' +
+        "<th>No</th><th>Tahun Ajaran</th><th>Semester</th><th>Status</th><th>Proteksi</th><th>Aksi</th></tr></thead><tbody id=\"ppBody\"></tbody></table></div></div>";
+      const body = document.getElementById("ppBody");
+      if (!rows.length) {
+        body.innerHTML =
+          '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Belum ada periode</td></tr>';
+        return;
+      }
+      body.innerHTML = rows
+        .map((r, i) => {
+          const locked = r.locked === true || r.locked === "true";
+          return (
+            "<tr><td>" +
+            (i + 1) +
+            "</td><td>" +
+            (r.tahun_ajaran || "—") +
+            "</td><td>" +
+            (r.semester || "—") +
+            "</td><td>" +
+            (r.status || "—") +
+            '</td><td><strong style="color:' +
+            (locked ? "#b91c1c" : "#059669") +
+            '">' +
+            (locked ? "Terkunci" : "Terbuka") +
+            "</strong></td><td>" +
+            '<button type="button" class="btn ' +
+            (locked ? "btn-secondary" : "btn-danger") +
+            ' btn-sm btn-pp" data-id="' +
+            r.id +
+            '" data-lock="' +
+            (locked ? "0" : "1") +
+            '">' +
+            (locked ? "Buka" : "Kunci") +
+            "</button></td></tr>"
+          );
+        })
+        .join("");
+      body.querySelectorAll(".btn-pp").forEach((b) =>
+        b.addEventListener("click", async () => {
+          const lock = b.dataset.lock === "1";
+          try {
+            await window.DB.update("periode", b.dataset.id, { locked: lock });
+            window.toast(lock ? "Periode dikunci" : "Periode dibuka");
+            mount();
+          } catch (e) {
+            window.toast(
+              "Gagal: " +
+                (e.message || e) +
+                ". Jika kolom locked belum ada, jalankan SQL 005_admin_proteksi.sql",
+              "error"
+            );
+          }
+        })
+      );
+    }
+
+    await mount();
   };
 
   // ========== SPA ROUTER ==========
@@ -5111,25 +5169,12 @@ window.initCrudPage = function (opts) {
       catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
       return;
     }
-    if (hash === "reset-pin-admin") {
+    if (hash === "keamanan" || hash === "reset-pin-admin" || hash === "reset-pin-guru" || hash === "proteksi-periode") {
       if (window.AUTH.role() !== "admin") { location.hash = "#/"; return; }
-      setActiveMenu("reset-pin-admin");
-      showPageLoading(main, "Reset PIN Admin");
-      try { await window.initResetPinAdminPage(); } catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">' + (e.message||e) + '</div>'; }
-      return;
-    }
-    if (hash === "reset-pin-guru") {
-      if (window.AUTH.role() !== "admin") { location.hash = "#/"; return; }
-      setActiveMenu("reset-pin-guru");
-      showPageLoading(main, "Reset PIN Guru");
-      try { await window.initResetPinGuruPage(); } catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">' + (e.message||e) + '</div>'; }
-      return;
-    }
-    if (hash === "proteksi-periode") {
-      if (window.AUTH.role() !== "admin") { location.hash = "#/"; return; }
-      setActiveMenu("proteksi-periode");
-      showPageLoading(main, "Proteksi Periode");
-      try { await window.initProteksiPeriodePage(); } catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">' + (e.message||e) + '</div>'; }
+      setActiveMenu("keamanan");
+      showPageLoading(main, "Keamanan & Periode");
+      const startTab = hash === "reset-pin-guru" ? "pin-guru" : hash === "proteksi-periode" ? "proteksi" : "pin-admin";
+      try { await window.initKeamananPage(startTab); } catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">' + (e.message||e) + '</div>'; }
       return;
     }
 
