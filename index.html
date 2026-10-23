@@ -767,15 +767,54 @@
       vertical-align: middle;
     }
 
-    /* Kolom Nama: lebih lebar, satu baris */
+    /* Kolom Nama: fixed saat scroll horizontal */
     .data-table th.col-nama,
     .data-table td.col-nama {
-      min-width: 180px;
-      max-width: 320px;
+      min-width: 200px;
+      max-width: 280px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       font-weight: 500;
+      position: sticky;
+      left: 40px;
+      z-index: 2;
+      background: #fff;
+      box-shadow: 2px 0 4px rgba(0,0,0,.06);
+    }
+    .data-table th.col-nama {
+      background: linear-gradient(135deg, var(--blue-700), var(--blue-600));
+      z-index: 3;
+    }
+    .data-table tbody tr:hover td.col-nama {
+      background: var(--blue-50);
+    }
+
+    .data-table th.col-check,
+    .data-table td.col-check {
+      width: 40px;
+      min-width: 40px;
+      max-width: 40px;
+      text-align: center;
+      padding: 8px 4px;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: #fff;
+    }
+    .data-table th.col-check {
+      background: linear-gradient(135deg, var(--blue-700), var(--blue-600));
+      z-index: 3;
+    }
+    .data-table tbody tr:hover td.col-check {
+      background: var(--blue-50);
+    }
+    .data-table input.row-check,
+    .data-table input#checkAll {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--blue-600);
     }
 
     .data-table th.col-no,
@@ -792,6 +831,24 @@
       width: 44px;
       min-width: 40px;
       text-align: center;
+    }
+
+    .data-table th.col-asal,
+    .data-table td.col-asal {
+      min-width: 180px;
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .data-table th.col-pangkat,
+    .data-table td.col-pangkat {
+      min-width: 140px;
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .data-table th.col-aksi,
@@ -817,7 +874,50 @@
     }
     .crud-page .page-toolbar {
       margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
     }
+    .crud-page .page-title {
+      margin: 0;
+      flex-shrink: 0;
+    }
+    .crud-page .toolbar-actions {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      justify-content: flex-end;
+      min-width: 0;
+    }
+    .crud-page .search-box {
+      flex: 1;
+      min-width: 120px;
+      max-width: 260px;
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      color: white;
+      box-shadow: 0 2px 8px rgba(239,68,68,.3);
+    }
+    .btn-danger:hover { filter: brightness(1.08); }
+    .btn-danger:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: none;
+    }
+    .btn-secondary {
+      background: white;
+      color: var(--blue-700);
+      border: 1px solid var(--blue-300);
+    }
+    .btn-secondary:hover {
+      background: var(--blue-50);
+    }
+    #importFile { display: none; }
 
     .badge {
       display: inline-block;
@@ -950,6 +1050,26 @@
       .main-content.crud-page {
         padding: 8px 6px 16px;
       }
+      .crud-page .page-title {
+        font-size: 15px;
+        width: 100%;
+      }
+      .crud-page .toolbar-actions {
+        width: 100%;
+        flex-wrap: nowrap;
+        gap: 6px;
+      }
+      .crud-page .toolbar-actions .btn {
+        padding: 8px 8px;
+        font-size: 11px;
+        flex-shrink: 0;
+      }
+      .crud-page .search-box {
+        max-width: none;
+        flex: 1;
+        min-width: 72px;
+        padding: 6px 8px;
+      }
       .crud-page .section-card {
         padding: 8px 4px;
         border-radius: 10px;
@@ -971,7 +1091,13 @@
       .crud-page .data-table th.col-nama,
       .crud-page .data-table td.col-nama {
         min-width: 160px;
-        max-width: 240px;
+        max-width: 220px;
+        left: 36px;
+      }
+      .crud-page .data-table th.col-check,
+      .crud-page .data-table td.col-check {
+        width: 36px;
+        min-width: 36px;
       }
       :root {
         --topbar-height: 56px;
@@ -1979,6 +2105,8 @@ window.initCrudPage = function (opts) {
     if (key === "no") return "col-no";
     if (key === "nama") return "col-nama";
     if (key === "jenis_kelamin") return "col-lp";
+    if (key === "asal_sekolah") return "col-asal";
+    if (key === "pangkat_gol") return "col-pangkat";
     return "";
   }
 
@@ -1986,11 +2114,14 @@ window.initCrudPage = function (opts) {
     <div class="page-toolbar">
       <h1 class="page-title"><i class="fas fa-table"></i> ${title}</h1>
       <div class="toolbar-actions">
+        <button type="button" class="btn btn-primary" id="btnAdd" title="Tambah"><i class="fas fa-plus"></i> <span class="btn-text">Tambah</span></button>
+        <button type="button" class="btn btn-secondary" id="btnImport" title="Impor CSV/JSON"><i class="fas fa-file-import"></i> <span class="btn-text">Impor</span></button>
+        <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" />
+        <button type="button" class="btn btn-danger" id="btnBulkDel" title="Hapus terpilih" disabled><i class="fas fa-trash"></i> <span class="btn-text">Hapus</span></button>
         <div class="search-box">
           <i class="fas fa-search"></i>
-          <input type="text" id="searchInput" placeholder="Cari..." />
+          <input type="text" id="searchInput" placeholder="Cari data..." />
         </div>
-        <button class="btn btn-primary" id="btnAdd"><i class="fas fa-plus"></i> Tambah</button>
       </div>
     </div>
     <div id="demoBanner" class="demo-banner" style="display:none">
@@ -2003,7 +2134,7 @@ window.initCrudPage = function (opts) {
           <tbody id="tbody"></tbody>
         </table>
       </div>
-      <div class="table-footer"><span id="rowCount">0 data</span></div>
+      <div class="table-footer"><span id="rowCount">0 data</span> · <span id="selCount">0 dipilih</span></div>
     </div>
 
     <!-- Modal Form -->
@@ -2025,9 +2156,10 @@ window.initCrudPage = function (opts) {
     </div>
   `;
 
-  // Header
+  // Header (+ checkbox)
   const thead = document.getElementById("theadRow");
   thead.innerHTML =
+    `<th class="col-check"><input type="checkbox" id="checkAll" title="Pilih semua" /></th>` +
     columns.map((c) => {
       const cls = colClass(c.key);
       const style = c.width && !cls ? `width:${c.width}` : "";
@@ -2052,11 +2184,26 @@ window.initCrudPage = function (opts) {
     }
   }
 
+  function updateSelCount() {
+    const n = document.querySelectorAll("#tbody .row-check:checked").length;
+    const el = document.getElementById("selCount");
+    if (el) el.textContent = n + " dipilih";
+    const bulk = document.getElementById("btnBulkDel");
+    if (bulk) bulk.disabled = n === 0;
+    const all = document.getElementById("checkAll");
+    const boxes = document.querySelectorAll("#tbody .row-check");
+    if (all && boxes.length) {
+      all.checked = n === boxes.length;
+      all.indeterminate = n > 0 && n < boxes.length;
+    }
+  }
+
   function render(rows) {
     const tbody = document.getElementById("tbody");
     document.getElementById("rowCount").textContent = rows.length + " data";
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="${columns.length + 1}" style="text-align:center;padding:28px;color:#64748b">Belum ada data</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${columns.length + 2}" style="text-align:center;padding:28px;color:#64748b">Belum ada data</td></tr>`;
+      updateSelCount();
       return;
     }
     tbody.innerHTML = rows
@@ -2068,10 +2215,13 @@ window.initCrudPage = function (opts) {
             if (c.type === "date") v = window.fmtDate(v);
             if (c.key === "jenis_kelamin" || c.key === "L/P") v = row.jenis_kelamin || v;
             const cls = colClass(c.key);
-            return `<td class="${cls}" title="${v == null || v === "" ? "" : escapeHtml(String(v))}">${v == null || v === "" ? "—" : escapeHtml(String(v))}</td>`;
+            const text = v == null || v === "" ? "—" : escapeHtml(String(v));
+            return `<td class="${cls}" title="${text === "—" ? "" : text}">${text}</td>`;
           })
           .join("");
-        return `<tr>${cells}
+        return `<tr>
+          <td class="col-check"><input type="checkbox" class="row-check" data-id="${row.id}" /></td>
+          ${cells}
           <td class="aksi">
             <button class="btn-icon btn-edit" data-id="${row.id}" title="Edit"><i class="fas fa-pen"></i></button>
             <button class="btn-icon btn-del" data-id="${row.id}" title="Hapus"><i class="fas fa-trash"></i></button>
@@ -2085,6 +2235,10 @@ window.initCrudPage = function (opts) {
     tbody.querySelectorAll(".btn-del").forEach((btn) =>
       btn.addEventListener("click", () => removeRow(btn.dataset.id))
     );
+    tbody.querySelectorAll(".row-check").forEach((cb) =>
+      cb.addEventListener("change", updateSelCount)
+    );
+    updateSelCount();
   }
 
   function escapeHtml(s) {
@@ -2132,6 +2286,124 @@ window.initCrudPage = function (opts) {
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeForm();
   });
+
+  // Pilih semua
+  document.getElementById("checkAll").addEventListener("change", (e) => {
+    document.querySelectorAll("#tbody .row-check").forEach((cb) => {
+      cb.checked = e.target.checked;
+    });
+    updateSelCount();
+  });
+
+  // Hapus massal
+  document.getElementById("btnBulkDel").addEventListener("click", async () => {
+    const ids = Array.from(document.querySelectorAll("#tbody .row-check:checked")).map((c) => c.dataset.id);
+    if (!ids.length) return;
+    if (!confirm("Hapus " + ids.length + " data terpilih?")) return;
+    try {
+      for (const id of ids) {
+        await window.DB.remove(table, id);
+      }
+      window.toast(ids.length + " data dihapus");
+      load(document.getElementById("searchInput").value.trim());
+    } catch (err) {
+      window.toast(String(err.message || err), "error");
+    }
+  });
+
+  // Impor CSV / JSON
+  document.getElementById("btnImport").addEventListener("click", () => {
+    document.getElementById("importFile").click();
+  });
+  document.getElementById("importFile").addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      let rows = [];
+      if (file.name.toLowerCase().endsWith(".json") || text.trim().startsWith("[")) {
+        rows = JSON.parse(text);
+        if (!Array.isArray(rows)) rows = [rows];
+      } else {
+        // CSV sederhana: baris 1 = header
+        const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((l) => l.trim());
+        if (lines.length < 2) throw new Error("CSV kosong atau tanpa data");
+        const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+        for (let i = 1; i < lines.length; i++) {
+          const vals = parseCsvLine(lines[i]);
+          const obj = {};
+          headers.forEach((h, j) => {
+            obj[h] = vals[j] != null ? vals[j].trim() : "";
+          });
+          rows.push(obj);
+        }
+      }
+      // Map header umum → field tabel
+      const keyMap = {
+        "L/P": "jenis_kelamin",
+        "l/p": "jenis_kelamin",
+        Nama: "nama",
+        nama: "nama",
+        NIP: "nip",
+        nip: "nip",
+        NSIN: "nsin",
+        nsin: "nsin",
+        NISN: "nisn",
+        nisn: "nisn",
+        Kelas: "kelas",
+        kelas: "kelas",
+        Status: "status",
+        status: "status",
+        "Asal Sekolah": "asal_sekolah",
+        asal_sekolah: "asal_sekolah",
+        "Pangkat/Gol": "pangkat_gol",
+        pangkat_gol: "pangkat_gol",
+        "Jabatan Struktural": "jabatan_struktural",
+        "Jabatan Fungsional": "jabatan_fungsional",
+        "Tahun Ajaran": "tahun_ajaran",
+        Semester: "semester",
+      };
+      let ok = 0;
+      for (const raw of rows) {
+        const body = {};
+        Object.keys(raw).forEach((k) => {
+          const field = keyMap[k] || k;
+          if (field === "id" || field === "no" || field === "created_at" || field === "updated_at") return;
+          let v = raw[k];
+          if (v === "" || v === undefined) v = null;
+          body[field] = v;
+        });
+        if (!body.nama && !body.tahun_ajaran) continue;
+        await window.DB.create(table, body);
+        ok++;
+      }
+      window.toast(ok + " data diimpor");
+      load(document.getElementById("searchInput").value.trim());
+    } catch (err) {
+      window.toast("Impor gagal: " + (err.message || err), "error");
+    }
+  });
+
+  function parseCsvLine(line) {
+    const out = [];
+    let cur = "";
+    let q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (q && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else q = !q;
+      } else if (ch === "," && !q) {
+        out.push(cur);
+        cur = "";
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
