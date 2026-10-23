@@ -2851,8 +2851,9 @@ window.initCrudPage = function (opts) {
   let pendingImportFile = null;
 
   const importModal = document.getElementById("importModal");
-  document.getElementById("importColsHint").textContent =
-    "Kolom: " + importHeaders.join(" · ");
+  document.getElementById("importColsHint").innerHTML =
+    "<strong>Urutan kolom (baris 1 = header):</strong><br/>" +
+    importKeys.map((k, i) => (i + 1) + ". " + importHeaders[i] + " <code>(" + k + ")</code>").join("<br/>");
 
   function openImportModal() {
     pendingImportFile = null;
@@ -2874,9 +2875,94 @@ window.initCrudPage = function (opts) {
     if (e.target === importModal) closeImportModal();
   });
 
-  // Download contoh format (CSV yang bisa dibuka Excel)
+  // Download contoh format — header = nama field tabel (rapi di Excel)
   document.getElementById("btnDownloadTemplate").addEventListener("click", () => {
-    const sample = importCols.map((c) => {
+    // Contoh baris realistis per tabel
+    const examples = {
+      data_siswa: [
+        {
+          nama: "Abi Mahmudin",
+          jenis_kelamin: "L",
+          nsin: "0123764559",
+          kelas: "7A",
+          tmp_lahir: "Lebak",
+          tgl_lahir: "2011-09-07",
+          status_awal: "Siswa Baru",
+          status: "Aktif",
+          mulai_sekolah: "2024-07-13",
+          asal_sekolah: "SDN 1 Majasari",
+        },
+        {
+          nama: "Siti Aisyah",
+          jenis_kelamin: "P",
+          nsin: "0123764560",
+          kelas: "7B",
+          tmp_lahir: "Pandeglang",
+          tgl_lahir: "2011-03-15",
+          status_awal: "Siswa Baru",
+          status: "Aktif",
+          mulai_sekolah: "2024-07-13",
+          asal_sekolah: "SDN 2 Sobang",
+        },
+      ],
+      data_guru: [
+        {
+          nama: "Budi Santoso",
+          jenis_kelamin: "L",
+          nip: "197602031995021001",
+          jabatan_struktural: "Guru Mapel",
+          jabatan_fungsional: "Guru Madya",
+          pangkat_gol: "Penata / IIIc",
+          status: "Aktif",
+          no_hp: "081234567890",
+          pin: "1234",
+        },
+        {
+          nama: "Siti Nurhaliza",
+          jenis_kelamin: "P",
+          nip: "198503152010012002",
+          jabatan_struktural: "Wali Kelas",
+          jabatan_fungsional: "Guru Muda",
+          pangkat_gol: "Penata Muda / IIIa",
+          status: "Aktif",
+          no_hp: "081298765432",
+          pin: "1234",
+        },
+      ],
+      data_lulusan: [
+        {
+          nama: "Ahmad Fauzi",
+          jenis_kelamin: "L",
+          nisn: "0012345678",
+          status: "Lulus",
+          predikat: "Baik",
+          tmp_lahir: "Lebak",
+          tgl_lahir: "2008-01-10",
+          mulai_sekolah: "2021-07-12",
+          tgl_lulus: "2024-06-15",
+          tahun_lulus: "2024",
+          lama_belajar: "3 tahun",
+          status_awal: "Siswa Baru",
+          asal_sekolah: "SDN 1 Contoh",
+        },
+      ],
+      periode: [
+        {
+          tahun_ajaran: "2026/2027",
+          semester: "Ganjil",
+          tgl_mulai: "2026-07-13",
+          tgl_akhir: "2026-12-20",
+          tgl_kelulusan: "",
+          tgl_naik_kelas: "",
+          sk_kelulusan: "-",
+          sk_naik_kelas: "-",
+          status: "Aktif",
+        },
+      ],
+    };
+
+    function sampleValue(c, row) {
+      if (row && row[c.key] != null && row[c.key] !== "") return row[c.key];
       if (c.key === "jenis_kelamin") return "L";
       if (c.key === "status") return (c.options && c.options[0]) || "Aktif";
       if (c.key === "semester") return "Ganjil";
@@ -2884,22 +2970,42 @@ window.initCrudPage = function (opts) {
       if (c.key === "nama") return "Contoh Nama";
       if (c.key === "tahun_ajaran") return "2026/2027";
       return "";
+    }
+
+    // Header pakai NAMA FIELD (sesuai database) agar import akurat
+    const headers = importKeys.slice();
+    const rowsData = examples[table] || [{}];
+    // Separator ; agar kolom tidak berantakan di Excel Indonesia
+    const sep = ";";
+    const lines = [];
+    lines.push(headers.map(csvEscape).join(sep));
+    rowsData.forEach((row) => {
+      lines.push(importCols.map((c) => csvEscape(sampleValue(c, row))).join(sep));
     });
-    // BOM agar Excel baca UTF-8
-    const csv = "\uFEFF" + importHeaders.map(csvEscape).join(",") + "\n" + sample.map(csvEscape).join(",") + "\n";
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    // Baris kosong + petunjuk
+    lines.push("");
+    lines.push(csvEscape("PETUNJUK: Jangan ubah baris header. Hapus baris petunjuk ini sebelum impor. Tanggal format YYYY-MM-DD. L/P = L atau P."));
+
+    const csv = "\uFEFF" + lines.join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "contoh_" + table + ".csv";
     a.click();
     URL.revokeObjectURL(a.href);
-    window.toast("Template diunduh — buka di Excel");
+    window.toast("Template diunduh — buka di Excel (kolom dipisah ;)");
   });
 
   function csvEscape(v) {
     const s = String(v == null ? "" : v);
-    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    if (/[";,\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
     return s;
+  }
+
+  function detectSep(headerLine) {
+    const sc = (headerLine.match(/;/g) || []).length;
+    const cc = (headerLine.match(/,/g) || []).length;
+    return sc >= cc ? ";" : ",";
   }
 
   document.getElementById("btnPickFile").addEventListener("click", () => {
@@ -2943,11 +3049,18 @@ window.initCrudPage = function (opts) {
         throw new Error("Untuk .xlsx: di Excel pilih File → Simpan Sebagai → CSV (UTF-8), lalu impor file .csv tersebut.");
       } else {
         const text = await file.text();
-        const lines = text.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((l) => l.trim());
+        const lines = text
+          .replace(/^\uFEFF/, "")
+          .replace(/\r\n/g, "\n")
+          .replace(/\r/g, "\n")
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => l && !/^PETUNJUK/i.test(l));
         if (lines.length < 2) throw new Error("File kosong atau hanya header");
-        const headers = parseCsvLine(lines[0]).map((h) => h.trim());
+        const sep = detectSep(lines[0]);
+        const headers = parseCsvLine(lines[0], sep).map((h) => h.trim());
         for (let i = 1; i < lines.length; i++) {
-          const vals = parseCsvLine(lines[i]);
+          const vals = parseCsvLine(lines[i], sep);
           const obj = {};
           headers.forEach((h, j) => {
             obj[h] = vals[j] != null ? String(vals[j]).trim() : "";
@@ -3018,7 +3131,8 @@ window.initCrudPage = function (opts) {
     }
   });
 
-  function parseCsvLine(line) {
+  function parseCsvLine(line, sep) {
+    sep = sep || ",";
     const out = [];
     let cur = "";
     let q = false;
@@ -3029,7 +3143,7 @@ window.initCrudPage = function (opts) {
           cur += '"';
           i++;
         } else q = !q;
-      } else if (ch === "," && !q) {
+      } else if (ch === sep && !q) {
         out.push(cur);
         cur = "";
       } else cur += ch;
