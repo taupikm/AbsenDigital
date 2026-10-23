@@ -986,6 +986,198 @@
         font-size: 8px;
       }
     }
+  /* ========== PAGE TOOLBAR & CRUD ========== */
+.page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.page-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue-800);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-title i { color: var(--blue-500); }
+.toolbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-width: 200px;
+}
+.search-box i { color: var(--gray-500); font-size: 13px; }
+.search-box input {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  width: 100%;
+  font-family: inherit;
+}
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  transition: all .15s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue-600), var(--blue-700));
+  color: white;
+  box-shadow: 0 2px 8px rgba(37,99,235,.3);
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+.btn-ghost:hover { background: var(--gray-200); }
+.btn-icon {
+  border: none;
+  background: var(--blue-50);
+  color: var(--blue-600);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 2px;
+}
+.btn-icon.btn-del { background: #fef2f2; color: #ef4444; }
+.btn-icon:hover { filter: brightness(0.95); }
+.table-footer {
+  padding: 12px 4px 0;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.demo-banner {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.demo-banner code {
+  background: #ffedd5;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.45);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all .2s;
+}
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 20px 50px rgba(0,0,0,.2);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.modal-header h2 {
+  font-size: 16px;
+  color: var(--blue-800);
+}
+.modal-close {
+  border: none;
+  background: var(--gray-100);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-body { padding: 20px; }
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+.form-group input,
+.form-group select {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--blue-400);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--gray-100);
+}
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
   </style>
 </head>
 <body>
@@ -1034,7 +1226,7 @@
       <!-- DASHBOARD -->
       <div class="menu-group">
         <div class="menu-group-title"><i class="fas fa-th-large"></i> DASHBOARD</div>
-        <a href="#" class="menu-item active"><i class="fas fa-home icon-blue"></i> Dashboard</a>
+        <a href="#/" class="menu-item active" data-page="dashboard"><i class="fas fa-home icon-blue"></i> Dashboard</a>
         <a href="#" class="menu-item"><i class="fas fa-search icon-cyan"></i> Cari Data Siswa</a>
         <a href="#" class="menu-item"><i class="fas fa-user-check icon-green"></i> Validasi Data Lulusan</a>
       </div>
@@ -1066,16 +1258,16 @@
       <!-- ADMIN -->
       <div class="menu-group">
         <div class="menu-group-title"><i class="fas fa-user-shield"></i> ADMIN</div>
-        <a href="pages/data-siswa.html" class="menu-item"><i class="fas fa-users icon-blue"></i> Data Siswa</a>
-        <a href="pages/data-guru.html" class="menu-item"><i class="fas fa-user-tie icon-indigo"></i> Data Guru</a>
-        <a href="pages/data-lulusan.html" class="menu-item"><i class="fas fa-graduation-cap icon-teal"></i> Data Lulusan</a>
+        <a href="#/data-siswa" class="menu-item" data-page="data-siswa"><i class="fas fa-users icon-blue"></i> Data Siswa</a>
+        <a href="#/data-guru" class="menu-item" data-page="data-guru"><i class="fas fa-user-tie icon-indigo"></i> Data Guru</a>
+        <a href="#/data-lulusan" class="menu-item" data-page="data-lulusan"><i class="fas fa-graduation-cap icon-teal"></i> Data Lulusan</a>
       </div>
 
       <!-- PENGATURAN -->
       <div class="menu-group">
         <div class="menu-group-title"><i class="fas fa-cogs"></i> PENGATURAN</div>
         <a href="#" class="menu-item"><i class="fas fa-book icon-indigo"></i> Mapel & Kelas</a>
-        <a href="pages/periode.html" class="menu-item"><i class="fas fa-calendar-check icon-green"></i> Periode</a>
+        <a href="#/periode" class="menu-item" data-page="periode"><i class="fas fa-calendar-check icon-green"></i> Periode</a>
         <a href="#" class="menu-item"><i class="fas fa-clock icon-orange"></i> Sesi & Hari Libur</a>
         <a href="#" class="menu-item"><i class="fas fa-hand-pointer icon-purple"></i> Izin Sidik Jari & Ujian</a>
         <a href="#" class="menu-item"><i class="fas fa-box-archive icon-amber"></i> Arsip Absensi</a>
@@ -1090,7 +1282,8 @@
   </aside>
 
   <!-- MAIN CONTENT -->
-  <main class="main-content">
+  <main class="main-content" id="main-content">
+  <div id="view-dashboard">
     <!-- Baris atas: Kartu+Stats (kiri) | Struktur Organisasi (kanan) di laptop -->
     <div class="dashboard-top">
       <div class="dashboard-left">
@@ -1355,6 +1548,7 @@
         </table>
       </div>
     </div>
+  </div><!-- end view-dashboard -->
   </main>
 
   <!-- FOOTER -->
@@ -1410,5 +1604,622 @@
       profileDropdown.classList.remove('show');
     });
   </script>
+
+  <script>
+/**
+ * Konfigurasi Supabase
+ * Ganti nilai di bawah dengan project Anda dari:
+ * Supabase Dashboard → Project Settings → API
+ *
+ * Mode DEMO: jika URL masih placeholder, aplikasi memakai data lokal (localStorage)
+ */
+window.APP_CONFIG = {
+  // --- Ganti dengan kredensial Supabase Anda ---
+  SUPABASE_URL: "https://jlfuxesxnxmyykdbmjrt.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_VrhH9r17E8ogzVnxfraqaA_cPWZ9Uz6",
+
+  // Edge Function base (opsional). Jika kosong, pakai REST langsung ke tabel.
+  // Contoh: https://YOUR_PROJECT.supabase.co/functions/v1/api
+  EDGE_FUNCTION_URL: "",
+
+  // true = pakai localStorage jika Supabase belum dikonfigurasi
+  DEMO_MODE: true,
+};
+
+/** Cek apakah kredensial sudah diisi */
+window.isSupabaseConfigured = function () {
+  const c = window.APP_CONFIG;
+  return (
+    c.SUPABASE_URL &&
+    !c.SUPABASE_URL.includes("YOUR_PROJECT") &&
+    c.SUPABASE_ANON_KEY &&
+    !c.SUPABASE_ANON_KEY.includes("YOUR_ANON")
+  );
+};
+
+
+/**
+ * Layer database: Supabase REST / Edge Function / localStorage (demo)
+ */
+(function () {
+  const STORAGE_PREFIX = "sis_";
+
+  const DEMO_SEED = {
+    periode: [
+      {
+        id: "p1",
+        no: 1,
+        tahun_ajaran: "2026/2027",
+        semester: "Ganjil",
+        tgl_mulai: "2026-07-13",
+        tgl_akhir: "2026-12-20",
+        tgl_kelulusan: null,
+        tgl_naik_kelas: null,
+        sk_kelulusan: "-",
+        sk_naik_kelas: "-",
+        status: "Aktif",
+      },
+    ],
+    data_guru: [
+      {
+        id: "g1",
+        no: 1,
+        nama: "Budi Santoso",
+        jenis_kelamin: "L",
+        nip: "197602031995021001",
+        jabatan_struktural: "Kepala Sekolah",
+        jabatan_fungsional: "Kepala Sekolah",
+        pangkat_gol: "Pembina / IVa",
+        status: "Aktif",
+        no_hp: "",
+        pin: "123456",
+      },
+    ],
+    data_siswa: [
+      {
+        id: "s1",
+        no: 1,
+        nama: "Abi Mahmudin",
+        jenis_kelamin: "L",
+        nsin: "0123764559",
+        kelas: "7A",
+        tmp_lahir: "Lebak",
+        tgl_lahir: "2011-09-07",
+        status_awal: "Siswa Baru",
+        status: "Aktif",
+        mulai_sekolah: "2024-07-13",
+        asal_sekolah: "SDN 1 Majasari",
+      },
+    ],
+    data_lulusan: [],
+  };
+
+  function ensureSeed(table) {
+    const key = STORAGE_PREFIX + table;
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, JSON.stringify(DEMO_SEED[table] || []));
+    }
+  }
+
+  function localGet(table) {
+    ensureSeed(table);
+    return JSON.parse(localStorage.getItem(STORAGE_PREFIX + table) || "[]");
+  }
+
+  function localSet(table, rows) {
+    localStorage.setItem(STORAGE_PREFIX + table, JSON.stringify(rows));
+  }
+
+  function uid() {
+    return "id_" + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+  }
+
+  // ---------- LocalStorage CRUD ----------
+  const localAPI = {
+    async list(table, params = {}) {
+      let rows = localGet(table);
+      if (params.status) rows = rows.filter((r) => r.status === params.status);
+      if (params.kelas) rows = rows.filter((r) => r.kelas === params.kelas);
+      if (params.q) {
+        const q = params.q.toLowerCase();
+        rows = rows.filter((r) =>
+          Object.values(r).some((v) => String(v || "").toLowerCase().includes(q))
+        );
+      }
+      return { data: rows, count: rows.length };
+    },
+    async get(table, id) {
+      const row = localGet(table).find((r) => r.id === id);
+      if (!row) throw new Error("Data tidak ditemukan");
+      return { data: row };
+    },
+    async create(table, body) {
+      const rows = localGet(table);
+      const row = {
+        ...body,
+        id: uid(),
+        no: rows.length ? Math.max(...rows.map((r) => r.no || 0)) + 1 : 1,
+      };
+      rows.push(row);
+      localSet(table, rows);
+      return { data: row };
+    },
+    async update(table, id, body) {
+      const rows = localGet(table);
+      const i = rows.findIndex((r) => r.id === id);
+      if (i < 0) throw new Error("Data tidak ditemukan");
+      rows[i] = { ...rows[i], ...body, id, no: rows[i].no };
+      localSet(table, rows);
+      return { data: rows[i] };
+    },
+    async remove(table, id) {
+      let rows = localGet(table);
+      rows = rows.filter((r) => r.id !== id);
+      localSet(table, rows);
+      return { success: true };
+    },
+  };
+
+  // ---------- Supabase REST CRUD ----------
+  function sbHeaders() {
+    const c = window.APP_CONFIG;
+    return {
+      apikey: c.SUPABASE_ANON_KEY,
+      Authorization: "Bearer " + c.SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    };
+  }
+
+  function sbBase(table) {
+    const c = window.APP_CONFIG;
+    if (c.EDGE_FUNCTION_URL) {
+      return c.EDGE_FUNCTION_URL.replace(/\/$/, "") + "/" + table;
+    }
+    return c.SUPABASE_URL.replace(/\/$/, "") + "/rest/v1/" + table;
+  }
+
+  const supabaseAPI = {
+    async list(table, params = {}) {
+      const c = window.APP_CONFIG;
+      if (c.EDGE_FUNCTION_URL) {
+        const qs = new URLSearchParams(params).toString();
+        const res = await fetch(sbBase(table) + (qs ? "?" + qs : ""), {
+          headers: sbHeaders(),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || res.statusText);
+        return json;
+      }
+      let url = sbBase(table) + "?select=*&order=no.asc";
+      if (params.status) url += `&status=eq.${encodeURIComponent(params.status)}`;
+      if (params.kelas) url += `&kelas=eq.${encodeURIComponent(params.kelas)}`;
+      if (params.q) {
+        // simple filter: nama
+        url += `&nama=ilike.*${encodeURIComponent(params.q)}*`;
+      }
+      const res = await fetch(url, { headers: sbHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || res.statusText);
+      return { data, count: data.length };
+    },
+    async get(table, id) {
+      const res = await fetch(sbBase(table) + "?id=eq." + encodeURIComponent(id) + "&select=*", {
+        headers: sbHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok || !data[0]) throw new Error("Data tidak ditemukan");
+      return { data: data[0] };
+    },
+    async create(table, body) {
+      const res = await fetch(sbBase(table), {
+        method: "POST",
+        headers: sbHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || res.statusText);
+      return { data: Array.isArray(data) ? data[0] : data };
+    },
+    async update(table, id, body) {
+      const res = await fetch(sbBase(table) + "?id=eq." + encodeURIComponent(id), {
+        method: "PATCH",
+        headers: sbHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || res.statusText);
+      return { data: Array.isArray(data) ? data[0] : data };
+    },
+    async remove(table, id) {
+      const res = await fetch(sbBase(table) + "?id=eq." + encodeURIComponent(id), {
+        method: "DELETE",
+        headers: sbHeaders(),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || data.error || res.statusText);
+      }
+      return { success: true };
+    },
+  };
+
+  function api() {
+    if (window.isSupabaseConfigured && window.isSupabaseConfigured()) {
+      return supabaseAPI;
+    }
+    return localAPI;
+  }
+
+  window.DB = {
+    list: (table, params) => api().list(table, params),
+    get: (table, id) => api().get(table, id),
+    create: (table, body) => api().create(table, body),
+    update: (table, id, body) => api().update(table, id, body),
+    remove: (table, id) => api().remove(table, id),
+    isDemo: () => !(window.isSupabaseConfigured && window.isSupabaseConfigured()),
+  };
+})();
+
+
+/**
+ * Generator halaman CRUD generik
+ * columns: [{ key, label, type?, required?, options?, width? }]
+ */
+window.initCrudPage = function (opts) {
+  const { table, title, columns, activePage } = opts;
+  // SPA: shell already present
+  document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+  const act = document.querySelector('.menu-item[data-page="'+activePage+'"]');
+  if (act) act.classList.add('active');
+
+  const main = document.getElementById("main-content");
+  const formFields = columns
+    .filter((c) => c.key !== "no" && c.key !== "id")
+    .map((c) => {
+      if (c.type === "select") {
+        const optsHtml = (c.options || [])
+          .map((o) => `<option value="${o}">${o}</option>`)
+          .join("");
+        return `<div class="form-group"><label>${c.label}${c.required ? " *" : ""}</label>
+          <select name="${c.key}" ${c.required ? "required" : ""}>${c.required ? "" : '<option value="">—</option>'}${optsHtml}</select></div>`;
+      }
+      if (c.type === "date") {
+        return `<div class="form-group"><label>${c.label}${c.required ? " *" : ""}</label>
+          <input type="date" name="${c.key}" ${c.required ? "required" : ""} /></div>`;
+      }
+      return `<div class="form-group"><label>${c.label}${c.required ? " *" : ""}</label>
+        <input type="text" name="${c.key}" ${c.required ? "required" : ""} placeholder="${c.label}" /></div>`;
+    })
+    .join("");
+
+  main.innerHTML = `
+    <div class="page-toolbar">
+      <h1 class="page-title"><i class="fas fa-table"></i> ${title}</h1>
+      <div class="toolbar-actions">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="searchInput" placeholder="Cari..." />
+        </div>
+        <button class="btn btn-primary" id="btnAdd"><i class="fas fa-plus"></i> Tambah</button>
+      </div>
+    </div>
+    <div id="demoBanner" class="demo-banner" style="display:none">
+      Mode Demo (localStorage). Isi <code>js/config.js</code> dengan URL &amp; Anon Key Supabase untuk koneksi database.
+    </div>
+    <div class="section-card">
+      <div class="table-wrapper">
+        <table class="data-table" id="dataTable">
+          <thead><tr id="theadRow"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer"><span id="rowCount">0 data</span></div>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal-overlay" id="modal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="modalTitle">Tambah Data</h2>
+          <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        <form id="dataForm" class="modal-body">
+          <input type="hidden" name="id" id="formId" />
+          <div class="form-grid">${formFields}</div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" id="btnCancel">Batal</button>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  // Header
+  const thead = document.getElementById("theadRow");
+  thead.innerHTML =
+    columns.map((c) => `<th style="${c.width ? "width:" + c.width : ""}">${c.label}</th>`).join("") +
+    `<th style="width:100px">Aksi</th>`;
+
+  if (window.DB.isDemo()) {
+    document.getElementById("demoBanner").style.display = "block";
+  }
+
+  let cache = [];
+
+  async function load(q) {
+    try {
+      const res = await window.DB.list(table, q ? { q } : {});
+      cache = res.data || [];
+      render(cache);
+    } catch (e) {
+      window.toast(String(e.message || e), "error");
+      render([]);
+    }
+  }
+
+  function render(rows) {
+    const tbody = document.getElementById("tbody");
+    document.getElementById("rowCount").textContent = rows.length + " data";
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="${columns.length + 1}" style="text-align:center;padding:28px;color:#64748b">Belum ada data</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows
+      .map((row, idx) => {
+        const cells = columns
+          .map((c) => {
+            let v = row[c.key];
+            if (c.key === "no") v = idx + 1;
+            if (c.type === "date") v = window.fmtDate(v);
+            if (c.key === "jenis_kelamin" || c.key === "L/P") v = row.jenis_kelamin || v;
+            return `<td>${v == null || v === "" ? "—" : escapeHtml(String(v))}</td>`;
+          })
+          .join("");
+        return `<tr>${cells}
+          <td class="aksi">
+            <button class="btn-icon btn-edit" data-id="${row.id}" title="Edit"><i class="fas fa-pen"></i></button>
+            <button class="btn-icon btn-del" data-id="${row.id}" title="Hapus"><i class="fas fa-trash"></i></button>
+          </td></tr>`;
+      })
+      .join("");
+
+    tbody.querySelectorAll(".btn-edit").forEach((btn) =>
+      btn.addEventListener("click", () => openForm(btn.dataset.id))
+    );
+    tbody.querySelectorAll(".btn-del").forEach((btn) =>
+      btn.addEventListener("click", () => removeRow(btn.dataset.id))
+    );
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+  }
+
+  const modal = document.getElementById("modal");
+  const form = document.getElementById("dataForm");
+
+  function openForm(id) {
+    form.reset();
+    document.getElementById("formId").value = id || "";
+    document.getElementById("modalTitle").textContent = id ? "Edit Data" : "Tambah Data";
+    if (id) {
+      const row = cache.find((r) => r.id === id);
+      if (row) {
+        columns.forEach((c) => {
+          if (c.key === "no" || c.key === "id") return;
+          const el = form.elements[c.key];
+          if (el) el.value = row[c.key] ?? "";
+        });
+      }
+    }
+    modal.classList.add("show");
+  }
+
+  function closeForm() {
+    modal.classList.remove("show");
+  }
+
+  async function removeRow(id) {
+    if (!confirm("Hapus data ini?")) return;
+    try {
+      await window.DB.remove(table, id);
+      window.toast("Data dihapus");
+      load(document.getElementById("searchInput").value.trim());
+    } catch (e) {
+      window.toast(String(e.message || e), "error");
+    }
+  }
+
+  document.getElementById("btnAdd").addEventListener("click", () => openForm(null));
+  document.getElementById("modalClose").addEventListener("click", closeForm);
+  document.getElementById("btnCancel").addEventListener("click", closeForm);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeForm();
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const body = {};
+    columns.forEach((c) => {
+      if (c.key === "no" || c.key === "id") return;
+      let v = fd.get(c.key);
+      if (v === "") v = null;
+      body[c.key] = v;
+    });
+    // map L/P column key if needed
+    if (body["L/P"] !== undefined) {
+      body.jenis_kelamin = body["L/P"];
+      delete body["L/P"];
+    }
+    const id = document.getElementById("formId").value;
+    try {
+      if (id) await window.DB.update(table, id, body);
+      else await window.DB.create(table, body);
+      window.toast(id ? "Data diperbarui" : "Data ditambahkan");
+      closeForm();
+      load(document.getElementById("searchInput").value.trim());
+    } catch (err) {
+      window.toast(String(err.message || err), "error");
+    }
+  });
+
+  let searchTimer;
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => load(e.target.value.trim()), 300);
+  });
+
+  load();
+};
+
+
+  
+  window.fmtDate = function (v) {
+    if (!v) return "—";
+    const d = new Date(v);
+    if (isNaN(d)) return v;
+    return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
+  };
+  window.toast = function (msg, type) {
+    type = type || "ok";
+    let el = document.getElementById("toast");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "toast";
+      el.style.cssText = "position:fixed;bottom:70px;right:20px;padding:12px 18px;border-radius:10px;color:#fff;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);transition:opacity .3s";
+      document.body.appendChild(el);
+    }
+    el.style.background = type === "error" ? "#ef4444" : "#10b981";
+    el.textContent = msg;
+    el.style.opacity = "1";
+    setTimeout(function () { el.style.opacity = "0"; }, 2800);
+  };
+
+  // ========== SPA ROUTER ==========
+  const PAGES = {
+    "data-siswa": {
+      table: "data_siswa",
+      title: "DATA SISWA",
+      activePage: "data-siswa",
+      columns: [
+        { key: "no", label: "No", width: "50px" },
+        { key: "nama", label: "Nama", required: true },
+        { key: "jenis_kelamin", label: "L/P", type: "select", options: ["L", "P"], required: true, width: "50px" },
+        { key: "nsin", label: "NSIN", required: true },
+        { key: "kelas", label: "Kelas" },
+        { key: "tmp_lahir", label: "Tmp Lahir" },
+        { key: "tgl_lahir", label: "Tgl Lahir", type: "date" },
+        { key: "status_awal", label: "Status Awal", type: "select", options: ["Siswa Baru", "Pindahan", "Mengulang"] },
+        { key: "status", label: "Status", type: "select", options: ["Aktif", "Nonaktif", "Lulus", "Pindah", "DO"], required: true },
+        { key: "mulai_sekolah", label: "Mulai Sekolah", type: "date" },
+        { key: "asal_sekolah", label: "Asal Sekolah" },
+      ],
+    },
+    "data-guru": {
+      table: "data_guru",
+      title: "DATA GURU",
+      activePage: "data-guru",
+      columns: [
+        { key: "no", label: "No", width: "50px" },
+        { key: "nama", label: "Nama", required: true },
+        { key: "jenis_kelamin", label: "L/P", type: "select", options: ["L", "P"], required: true, width: "50px" },
+        { key: "nip", label: "NIP", required: true },
+        { key: "jabatan_struktural", label: "Jabatan Struktural" },
+        { key: "jabatan_fungsional", label: "Jabatan Fungsional" },
+        { key: "pangkat_gol", label: "Pangkat/Gol" },
+        { key: "status", label: "Status", type: "select", options: ["Aktif", "Nonaktif", "Pensiun", "Mutasi"], required: true },
+        { key: "no_hp", label: "No HP" },
+        { key: "pin", label: "PIN" },
+      ],
+    },
+    "data-lulusan": {
+      table: "data_lulusan",
+      title: "DATA LULUSAN",
+      activePage: "data-lulusan",
+      columns: [
+        { key: "no", label: "No", width: "50px" },
+        { key: "nama", label: "Nama", required: true },
+        { key: "jenis_kelamin", label: "L/P", type: "select", options: ["L", "P"], required: true, width: "50px" },
+        { key: "nisn", label: "NISN" },
+        { key: "status", label: "Status", type: "select", options: ["Lulus", "Tidak Lulus"] },
+        { key: "predikat", label: "Predikat", type: "select", options: ["Sangat Baik", "Baik", "Cukup", "Kurang"] },
+        { key: "tmp_lahir", label: "Tmp Lahir" },
+        { key: "tgl_lahir", label: "Tgl Lahir", type: "date" },
+        { key: "mulai_sekolah", label: "Mulai Sekolah", type: "date" },
+        { key: "tgl_lulus", label: "Tgl Lulus", type: "date" },
+        { key: "tahun_lulus", label: "Tahun Lulus" },
+        { key: "lama_belajar", label: "Lama Belajar" },
+        { key: "status_awal", label: "Status Awal" },
+        { key: "asal_sekolah", label: "Asal Sekolah" },
+      ],
+    },
+    "periode": {
+      table: "periode",
+      title: "PERIODE",
+      activePage: "periode",
+      columns: [
+        { key: "no", label: "No", width: "50px" },
+        { key: "tahun_ajaran", label: "Tahun Ajaran", required: true },
+        { key: "semester", label: "Semester", type: "select", options: ["Ganjil", "Genap"], required: true },
+        { key: "tgl_mulai", label: "Tgl Mulai", type: "date", required: true },
+        { key: "tgl_akhir", label: "Tgl Akhir", type: "date", required: true },
+        { key: "tgl_kelulusan", label: "Tgl Kelulusan", type: "date" },
+        { key: "tgl_naik_kelas", label: "Tgl Naik Kelas", type: "date" },
+        { key: "sk_kelulusan", label: "SK Kelulusan" },
+        { key: "sk_naik_kelas", label: "SK Naik Kelas" },
+        { key: "status", label: "Status", type: "select", options: ["Aktif", "Nonaktif", "Selesai"], required: true },
+      ],
+    },
+  };
+
+  // Simpan HTML dashboard asli
+  let dashboardHTML = null;
+
+  function closeSidebar() {
+    document.getElementById("sidebar")?.classList.remove("open");
+    document.getElementById("sidebarOverlay")?.classList.remove("show");
+  }
+
+  function route() {
+    const hash = (location.hash || "#/").replace(/^#\/?/, "") || "";
+    const main = document.getElementById("main-content");
+    if (!main) return;
+
+    if (!dashboardHTML) {
+      const vd = document.getElementById("view-dashboard");
+      dashboardHTML = vd ? vd.innerHTML : main.innerHTML;
+    }
+
+    closeSidebar();
+
+    if (!hash || hash === "dashboard") {
+      main.innerHTML = '<div id="view-dashboard">' + dashboardHTML + '</div>';
+      document.querySelectorAll(".menu-item").forEach(el => el.classList.remove("active"));
+      document.querySelector('.menu-item[data-page="dashboard"]')?.classList.add("active");
+      return;
+    }
+
+    const conf = PAGES[hash];
+    if (!conf) {
+      main.innerHTML = '<div class="section-card" style="padding:40px;text-align:center"><h2>Halaman tidak ditemukan</h2><p><a href="#/">Kembali ke Dashboard</a></p></div>';
+      return;
+    }
+    // initCrudPage mengisi #main-content
+    initCrudPage(conf);
+  }
+
+  window.addEventListener("hashchange", route);
+  // setelah DOM siap
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", route);
+  } else {
+    // sedikit delay agar shell & dashboard ter-render dulu
+    setTimeout(route, 0);
+  }
+  </script>
+
 </body>
 </html>
