@@ -2803,6 +2803,407 @@ window.initCrudPage = function (opts) {
     setTimeout(function () { el.style.opacity = "0"; }, 2800);
   };
 
+
+  // ========== MAPEL & KELAS (terikat periode + guru) ==========
+  window.initMapelKelasPage = async function (startTab) {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.classList.add("crud-page");
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    const menuEl = document.querySelector('.menu-item[data-page="mapel-kelas"]');
+    if (menuEl) menuEl.classList.add("active");
+
+    let periodes = [];
+    try {
+      const periodeRes = await window.DB.list("periode");
+      periodes = periodeRes.data || [];
+    } catch (e) {
+      periodes = [];
+    }
+    const aktif = periodes.find((p) => p.status === "Aktif") || periodes[0];
+    let currentPeriodeId = aktif ? aktif.id : "";
+    let currentTab = startTab || "mapel";
+
+    const tabDefs = {
+      mapel: {
+        table: "mapel",
+        title: "Mata Pelajaran",
+        columns: [
+          { key: "no", label: "No" },
+          { key: "nama_mapel", label: "Mata Pelajaran", required: true },
+          { key: "tahun_ajaran", label: "Tahun Ajaran" },
+          { key: "semester", label: "Semester", type: "select", options: ["Ganjil", "Genap"] },
+        ],
+      },
+      kelas: {
+        table: "kelas",
+        title: "Kelas",
+        columns: [
+          { key: "no", label: "No" },
+          { key: "nama_kelas", label: "Kelas", required: true },
+          { key: "tahun_ajaran", label: "Tahun Ajaran" },
+          { key: "semester", label: "Semester", type: "select", options: ["Ganjil", "Genap"] },
+        ],
+      },
+      penilaian: {
+        table: "jenis_penilaian",
+        title: "Jenis Penilaian",
+        columns: [
+          { key: "no", label: "No" },
+          { key: "nama_penilaian", label: "Nama Penilaian", required: true },
+          { key: "semester", label: "Semester", type: "select", options: ["Ganjil", "Genap", ""] },
+          { key: "bobot", label: "Bobot (%)" },
+          { key: "tahun_ajaran", label: "Tahun Ajaran" },
+        ],
+      },
+      "guru-ampu": {
+        table: "guru_ampu",
+        title: "Pengampu (Guru–Mapel–Kelas)",
+        columns: [
+          { key: "no", label: "No" },
+          { key: "guru_nama", label: "Guru", required: true },
+          { key: "mapel_nama", label: "Mata Pelajaran", required: true },
+          { key: "kelas_nama", label: "Kelas", required: true },
+          { key: "tahun_ajaran", label: "Tahun Ajaran" },
+          { key: "semester", label: "Semester", type: "select", options: ["Ganjil", "Genap"] },
+        ],
+      },
+    };
+
+    function periodeLabel(p) {
+      if (!p) return "—";
+      return (p.tahun_ajaran || "") + " · " + (p.semester || "") + (p.status === "Aktif" ? " (Aktif)" : "");
+    }
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (m) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])
+      );
+    }
+
+    async function mountTab() {
+      const def = tabDefs[currentTab];
+      const host = document.getElementById("tabCrudHost");
+      if (!host || !def) return;
+
+      const per = periodes.find((p) => p.id === currentPeriodeId);
+      let rows = [];
+      try {
+        const res = await window.DB.list(def.table);
+        rows = (res.data || []).filter((r) => !currentPeriodeId || r.periode_id === currentPeriodeId);
+      } catch (e) {
+        rows = [];
+      }
+
+      const guruList = ((await window.DB.list("data_guru").catch(() => ({ data: [] }))).data) || [];
+      const mapelList = (((await window.DB.list("mapel").catch(() => ({ data: [] }))).data) || []).filter(
+        (m) => m.periode_id === currentPeriodeId
+      );
+      const kelasList = (((await window.DB.list("kelas").catch(() => ({ data: [] }))).data) || []).filter(
+        (k) => k.periode_id === currentPeriodeId
+      );
+
+      host.innerHTML =
+        '<div class="page-toolbar" style="margin-top:4px">' +
+        '<h2 class="page-title" style="font-size:15px">' +
+        def.title +
+        "</h2>" +
+        '<div class="toolbar-actions">' +
+        '<button type="button" class="btn btn-primary" id="mkAdd"><i class="fas fa-plus"></i> <span class="btn-text">Tambah</span></button>' +
+        '<button type="button" class="btn btn-danger" id="mkBulk" disabled><i class="fas fa-trash"></i> <span class="btn-text">Hapus</span></button>' +
+        '<div class="search-box"><i class="fas fa-search"></i><input type="text" id="mkSearch" placeholder="Cari..." /></div>' +
+        "</div></div>" +
+        '<div class="section-card"><div class="table-wrapper"><table class="data-table crud-table"><thead><tr>' +
+        '<th class="col-check"><input type="checkbox" id="mkCheckAll" /></th>' +
+        def.columns
+          .map((c) => {
+            const cls =
+              c.key === "nama_mapel" || c.key === "nama_kelas" || c.key === "nama_penilaian" || c.key === "guru_nama"
+                ? "col-nama"
+                : "";
+            return '<th class="' + cls + '">' + c.label + "</th>";
+          })
+          .join("") +
+        '<th class="col-aksi">Aksi</th></tr></thead><tbody id="mkBody"></tbody></table></div>' +
+        '<div class="table-footer"><span id="mkCount">' +
+        rows.length +
+        " data</span></div></div>" +
+        '<div class="modal-overlay" id="mkModal"><div class="modal">' +
+        '<div class="modal-header"><h2 id="mkModalTitle">Tambah</h2><button type="button" class="modal-close" id="mkModalClose">&times;</button></div>' +
+        '<form id="mkForm" class="modal-body"><input type="hidden" id="mkId" /><div class="form-grid" id="mkFields"></div>' +
+        '<div class="modal-footer"><button type="button" class="btn btn-ghost" id="mkCancel">Batal</button>' +
+        '<button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>';
+
+      function render(list) {
+        const body = document.getElementById("mkBody");
+        const countEl = document.getElementById("mkCount");
+        if (countEl) countEl.textContent = list.length + " data";
+        if (!list.length) {
+          body.innerHTML =
+            '<tr><td colspan="' +
+            (def.columns.length + 2) +
+            '" style="text-align:center;padding:24px;color:#64748b">Belum ada data untuk periode ini</td></tr>';
+          return;
+        }
+        body.innerHTML = list
+          .map((row, idx) => {
+            const cells = def.columns
+              .map((c) => {
+                let v = c.key === "no" ? idx + 1 : row[c.key];
+                const cls =
+                  c.key === "nama_mapel" || c.key === "nama_kelas" || c.key === "nama_penilaian" || c.key === "guru_nama"
+                    ? "col-nama"
+                    : "";
+                return '<td class="' + cls + '">' + (v == null || v === "" ? "—" : esc(v)) + "</td>";
+              })
+              .join("");
+            return (
+              "<tr><td class=\"col-check\"><input type=\"checkbox\" class=\"mk-check\" data-id=\"" +
+              row.id +
+              '" /></td>' +
+              cells +
+              '<td class="aksi">' +
+              '<button type="button" class="btn-icon btn-edit" data-id="' +
+              row.id +
+              '"><i class="fas fa-pen"></i></button> ' +
+              '<button type="button" class="btn-icon btn-del" data-id="' +
+              row.id +
+              '"><i class="fas fa-trash"></i></button></td></tr>'
+            );
+          })
+          .join("");
+
+        body.querySelectorAll(".btn-edit").forEach((b) => b.addEventListener("click", () => openForm(b.dataset.id)));
+        body.querySelectorAll(".btn-del").forEach((b) =>
+          b.addEventListener("click", async () => {
+            if (!confirm("Hapus data ini?")) return;
+            await window.DB.remove(def.table, b.dataset.id);
+            window.toast("Data dihapus");
+            rows = rows.filter((r) => r.id !== b.dataset.id);
+            render(rows);
+          })
+        );
+        const bulk = document.getElementById("mkBulk");
+        const syncBulk = () => {
+          bulk.disabled = !body.querySelectorAll(".mk-check:checked").length;
+        };
+        body.querySelectorAll(".mk-check").forEach((c) => c.addEventListener("change", syncBulk));
+        document.getElementById("mkCheckAll").onchange = (e) => {
+          body.querySelectorAll(".mk-check").forEach((c) => (c.checked = e.target.checked));
+          syncBulk();
+        };
+        bulk.onclick = async () => {
+          const ids = Array.from(body.querySelectorAll(".mk-check:checked")).map((c) => c.dataset.id);
+          if (!ids.length || !confirm("Hapus " + ids.length + " data?")) return;
+          for (const id of ids) await window.DB.remove(def.table, id);
+          window.toast(ids.length + " data dihapus");
+          rows = rows.filter((r) => !ids.includes(r.id));
+          render(rows);
+        };
+      }
+
+      function openForm(id) {
+        const modal = document.getElementById("mkModal");
+        const fields = document.getElementById("mkFields");
+        document.getElementById("mkId").value = id || "";
+        document.getElementById("mkModalTitle").textContent = (id ? "Edit " : "Tambah ") + def.title;
+        const row = id ? rows.find((r) => r.id === id) : null;
+
+        if (currentTab === "guru-ampu") {
+          fields.innerHTML =
+            '<div class="form-group"><label>Guru *</label><select name="guru_id" required><option value="">— pilih —</option>' +
+            guruList
+              .map(
+                (g) =>
+                  '<option value="' +
+                  g.id +
+                  '" ' +
+                  (row && row.guru_id === g.id ? "selected" : "") +
+                  ">" +
+                  esc(g.nama) +
+                  "</option>"
+              )
+              .join("") +
+            '</select></div><div class="form-group"><label>Mata Pelajaran *</label><select name="mapel_id" required><option value="">— pilih —</option>' +
+            mapelList
+              .map(
+                (m) =>
+                  '<option value="' +
+                  m.id +
+                  '" ' +
+                  (row && row.mapel_id === m.id ? "selected" : "") +
+                  ">" +
+                  esc(m.nama_mapel) +
+                  "</option>"
+              )
+              .join("") +
+            '</select></div><div class="form-group"><label>Kelas *</label><select name="kelas_id" required><option value="">— pilih —</option>' +
+            kelasList
+              .map(
+                (k) =>
+                  '<option value="' +
+                  k.id +
+                  '" ' +
+                  (row && row.kelas_id === k.id ? "selected" : "") +
+                  ">" +
+                  esc(k.nama_kelas) +
+                  "</option>"
+              )
+              .join("") +
+            '</select></div><div class="form-group"><label>Semester</label><select name="semester"><option value="Ganjil">Ganjil</option><option value="Genap">Genap</option></select></div>';
+          const sm = fields.querySelector('[name="semester"]');
+          if (row && row.semester) sm.value = row.semester;
+          else if (per) sm.value = per.semester || "Ganjil";
+        } else {
+          fields.innerHTML = def.columns
+            .filter((c) => c.key !== "no")
+            .map((c) => {
+              if (c.type === "select") {
+                return (
+                  '<div class="form-group"><label>' +
+                  c.label +
+                  '</label><select name="' +
+                  c.key +
+                  '">' +
+                  (c.options || [])
+                    .map((o) => '<option value="' + o + '">' + (o || "—") + "</option>")
+                    .join("") +
+                  "</select></div>"
+                );
+              }
+              return (
+                '<div class="form-group"><label>' +
+                c.label +
+                (c.required ? " *" : "") +
+                '</label><input type="text" name="' +
+                c.key +
+                '" ' +
+                (c.required ? "required" : "") +
+                " /></div>"
+              );
+            })
+            .join("");
+          if (row) {
+            def.columns.forEach((c) => {
+              if (c.key === "no") return;
+              const el = fields.querySelector('[name="' + c.key + '"]');
+              if (el) el.value = row[c.key] ?? "";
+            });
+          } else if (per) {
+            const ta = fields.querySelector('[name="tahun_ajaran"]');
+            const sm = fields.querySelector('[name="semester"]');
+            if (ta) ta.value = per.tahun_ajaran || "";
+            if (sm) sm.value = per.semester || "Ganjil";
+          }
+        }
+        modal.classList.add("show");
+      }
+
+      document.getElementById("mkModalClose").onclick = () => document.getElementById("mkModal").classList.remove("show");
+      document.getElementById("mkCancel").onclick = () => document.getElementById("mkModal").classList.remove("show");
+      document.getElementById("mkAdd").onclick = () => openForm(null);
+      document.getElementById("mkSearch").oninput = (e) => {
+        const q = e.target.value.toLowerCase();
+        render(rows.filter((r) => Object.values(r).some((v) => String(v || "").toLowerCase().includes(q))));
+      };
+
+      document.getElementById("mkForm").onsubmit = async (ev) => {
+        ev.preventDefault();
+        const fd = new FormData(ev.target);
+        const id = document.getElementById("mkId").value;
+        let body = {};
+        if (currentTab === "guru-ampu") {
+          const gid = fd.get("guru_id");
+          const mid = fd.get("mapel_id");
+          const kid = fd.get("kelas_id");
+          const g = guruList.find((x) => x.id === gid);
+          const m = mapelList.find((x) => x.id === mid);
+          const k = kelasList.find((x) => x.id === kid);
+          body = {
+            guru_id: gid,
+            guru_nama: g ? g.nama : "",
+            mapel_id: mid,
+            mapel_nama: m ? m.nama_mapel : "",
+            kelas_id: kid,
+            kelas_nama: k ? k.nama_kelas : "",
+            semester: fd.get("semester") || (per && per.semester) || "Ganjil",
+            tahun_ajaran: per ? per.tahun_ajaran : "",
+            periode_id: currentPeriodeId,
+          };
+        } else {
+          def.columns.forEach((c) => {
+            if (c.key === "no") return;
+            let v = fd.get(c.key);
+            if (v === "") v = null;
+            body[c.key] = v;
+          });
+          body.periode_id = currentPeriodeId;
+          if (per) {
+            if (!body.tahun_ajaran) body.tahun_ajaran = per.tahun_ajaran;
+            if (!body.semester) body.semester = per.semester;
+          }
+        }
+        try {
+          if (id) await window.DB.update(def.table, id, body);
+          else await window.DB.create(def.table, body);
+          window.toast(id ? "Data diperbarui" : "Data ditambahkan");
+          document.getElementById("mkModal").classList.remove("show");
+          const res2 = await window.DB.list(def.table);
+          rows = (res2.data || []).filter((r) => !currentPeriodeId || r.periode_id === currentPeriodeId);
+          render(rows);
+        } catch (err) {
+          window.toast(String(err.message || err), "error");
+        }
+      };
+
+      render(rows);
+    }
+
+    const opts = periodes
+      .map(
+        (p) =>
+          '<option value="' +
+          p.id +
+          '" ' +
+          (p.id === currentPeriodeId ? "selected" : "") +
+          ">" +
+          periodeLabel(p) +
+          "</option>"
+      )
+      .join("");
+
+    main.innerHTML =
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-book"></i> Mapel &amp; Kelas</h1></div>' +
+      '<div class="periode-filter"><i class="fas fa-calendar-alt" style="color:var(--blue-600)"></i> <strong>Periode:</strong> ' +
+      '<select id="filterPeriode">' +
+      (opts || '<option value="">Belum ada periode</option>') +
+      '</select> <span style="font-size:12px;color:var(--gray-500)">Data terikat periode ini</span></div>' +
+      '<div class="tabs-bar">' +
+      '<button type="button" class="tab-btn" data-tab="mapel">Mata Pelajaran</button>' +
+      '<button type="button" class="tab-btn" data-tab="kelas">Kelas</button>' +
+      '<button type="button" class="tab-btn" data-tab="penilaian">Jenis Penilaian</button>' +
+      '<button type="button" class="tab-btn" data-tab="guru-ampu">Pengampu Guru</button>' +
+      '</div><div id="tabCrudHost"></div>';
+
+    main.querySelectorAll(".tab-btn").forEach((b) => {
+      b.classList.toggle("active", b.dataset.tab === currentTab);
+      b.addEventListener("click", () => {
+        currentTab = b.dataset.tab;
+        main.querySelectorAll(".tab-btn").forEach((x) => x.classList.toggle("active", x.dataset.tab === currentTab));
+        mountTab();
+      });
+    });
+    const fp = document.getElementById("filterPeriode");
+    if (fp) {
+      fp.addEventListener("change", (e) => {
+        currentPeriodeId = e.target.value;
+        mountTab();
+      });
+    }
+    await mountTab();
+  };
+
+
   // ========== SPA ROUTER ==========
   const PAGES = {
     "data-siswa": {
@@ -2909,7 +3310,7 @@ window.initCrudPage = function (opts) {
     }
 
     if (hash === "mapel-kelas" || hash === "mapel" || hash === "kelas" || hash === "penilaian" || hash === "guru-ampu") {
-      initMapelKelasPage(hash === "mapel-kelas" ? "mapel" : hash);
+      window.initMapelKelasPage(hash === "mapel-kelas" ? "mapel" : hash);
       return;
     }
     const conf = PAGES[hash];
