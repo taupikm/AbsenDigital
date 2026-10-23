@@ -919,6 +919,78 @@
     }
     #importFile { display: none; }
 
+    /* Modal impor */
+    .import-modal-body {
+      padding: 4px 0 0;
+    }
+    .import-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .import-step {
+      background: var(--blue-50);
+      border: 1px solid var(--blue-100);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .import-step h4 {
+      font-size: 13px;
+      color: var(--blue-800);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .import-step p {
+      font-size: 12px;
+      color: var(--gray-600);
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+    .import-cols {
+      font-size: 11px;
+      color: var(--gray-500);
+      background: white;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      word-break: break-word;
+      border: 1px dashed var(--gray-200);
+    }
+    .import-file-name {
+      font-size: 12px;
+      color: var(--gray-600);
+      margin-top: 8px;
+      min-height: 18px;
+    }
+    .progress-wrap {
+      display: none;
+      margin-top: 14px;
+    }
+    .progress-wrap.show {
+      display: block;
+    }
+    .progress-bar-bg {
+      height: 12px;
+      background: var(--gray-200);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2563eb, #1e40af);
+      border-radius: 20px;
+      transition: width 0.2s ease;
+    }
+    .progress-text {
+      font-size: 12px;
+      color: var(--gray-600);
+      margin-top: 8px;
+      text-align: center;
+    }
+
     .badge {
       display: inline-block;
       padding: 3px 10px;
@@ -2166,7 +2238,7 @@ window.initCrudPage = function (opts) {
       <div class="toolbar-actions">
         <button type="button" class="btn btn-primary" id="btnAdd" title="Tambah"><i class="fas fa-plus"></i> <span class="btn-text">Tambah</span></button>
         <button type="button" class="btn btn-secondary" id="btnImport" title="Impor CSV/JSON"><i class="fas fa-file-import"></i> <span class="btn-text">Impor</span></button>
-        <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" />
+        <input type="file" id="importFile" accept=".csv,.xlsx,.xls,.json,text/csv,application/json,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
         <button type="button" class="btn btn-danger" id="btnBulkDel" title="Hapus terpilih" disabled><i class="fas fa-trash"></i> <span class="btn-text">Hapus</span></button>
         <div class="search-box">
           <i class="fas fa-search"></i>
@@ -2202,6 +2274,40 @@ window.initCrudPage = function (opts) {
             <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal Impor -->
+    <div class="modal-overlay" id="importModal">
+      <div class="modal" style="max-width:480px">
+        <div class="modal-header">
+          <h2><i class="fas fa-file-import" style="color:var(--blue-500)"></i> Impor ${title}</h2>
+          <button class="modal-close" id="importModalClose">&times;</button>
+        </div>
+        <div class="modal-body import-modal-body">
+          <div class="import-steps">
+            <div class="import-step">
+              <h4><span style="background:var(--blue-600);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px">1</span> Unduh contoh format</h4>
+              <p>File Excel (.csv) berisi kolom sesuai tabel. Buka di Excel/Google Sheets, isi data, lalu simpan.</p>
+              <div class="import-cols" id="importColsHint"></div>
+              <button type="button" class="btn btn-primary" id="btnDownloadTemplate"><i class="fas fa-download"></i> Download contoh format (Excel)</button>
+            </div>
+            <div class="import-step">
+              <h4><span style="background:var(--blue-600);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px">2</span> Pilih file</h4>
+              <p>Pilih file .csv / .xlsx / .json yang sudah diisi.</p>
+              <button type="button" class="btn btn-secondary" id="btnPickFile"><i class="fas fa-folder-open"></i> Pilih file</button>
+              <div class="import-file-name" id="importFileName">Belum ada file dipilih</div>
+            </div>
+          </div>
+          <div class="progress-wrap" id="importProgress">
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="importProgressFill"></div></div>
+            <div class="progress-text" id="importProgressText">Menyiapkan...</div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" id="btnImportCancel">Tutup</button>
+            <button type="button" class="btn btn-primary" id="btnStartImport" disabled><i class="fas fa-upload"></i> Mulai impor</button>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -2361,77 +2467,177 @@ window.initCrudPage = function (opts) {
     }
   });
 
-  // Impor CSV / JSON
-  document.getElementById("btnImport").addEventListener("click", () => {
+  // ===== Impor: popup + template + progress =====
+  const importCols = columns.filter((c) => c.key !== "no" && c.key !== "id");
+  const importHeaders = importCols.map((c) => c.label);
+  const importKeys = importCols.map((c) => c.key);
+  let pendingImportFile = null;
+
+  const importModal = document.getElementById("importModal");
+  document.getElementById("importColsHint").textContent =
+    "Kolom: " + importHeaders.join(" · ");
+
+  function openImportModal() {
+    pendingImportFile = null;
+    document.getElementById("importFileName").textContent = "Belum ada file dipilih";
+    document.getElementById("btnStartImport").disabled = true;
+    document.getElementById("importProgress").classList.remove("show");
+    document.getElementById("importProgressFill").style.width = "0%";
+    importModal.classList.add("show");
+  }
+  function closeImportModal() {
+    if (document.getElementById("btnStartImport").dataset.busy === "1") return;
+    importModal.classList.remove("show");
+  }
+
+  document.getElementById("btnImport").addEventListener("click", openImportModal);
+  document.getElementById("importModalClose").addEventListener("click", closeImportModal);
+  document.getElementById("btnImportCancel").addEventListener("click", closeImportModal);
+  importModal.addEventListener("click", (e) => {
+    if (e.target === importModal) closeImportModal();
+  });
+
+  // Download contoh format (CSV yang bisa dibuka Excel)
+  document.getElementById("btnDownloadTemplate").addEventListener("click", () => {
+    const sample = importCols.map((c) => {
+      if (c.key === "jenis_kelamin") return "L";
+      if (c.key === "status") return (c.options && c.options[0]) || "Aktif";
+      if (c.key === "semester") return "Ganjil";
+      if (c.type === "date") return "2024-07-13";
+      if (c.key === "nama") return "Contoh Nama";
+      if (c.key === "tahun_ajaran") return "2026/2027";
+      return "";
+    });
+    // BOM agar Excel baca UTF-8
+    const csv = "\uFEFF" + importHeaders.map(csvEscape).join(",") + "\n" + sample.map(csvEscape).join(",") + "\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "contoh_" + table + ".csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    window.toast("Template diunduh — buka di Excel");
+  });
+
+  function csvEscape(v) {
+    const s = String(v == null ? "" : v);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  document.getElementById("btnPickFile").addEventListener("click", () => {
     document.getElementById("importFile").click();
   });
-  document.getElementById("importFile").addEventListener("change", async (e) => {
+  document.getElementById("importFile").addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = "";
     if (!file) return;
+    pendingImportFile = file;
+    document.getElementById("importFileName").innerHTML =
+      '<i class="fas fa-file" style="color:var(--blue-500)"></i> ' + escapeHtml(file.name) +
+      " (" + Math.round(file.size / 1024) + " KB)";
+    document.getElementById("btnStartImport").disabled = false;
+  });
+
+  document.getElementById("btnStartImport").addEventListener("click", async () => {
+    if (!pendingImportFile) return;
+    const btn = document.getElementById("btnStartImport");
+    btn.dataset.busy = "1";
+    btn.disabled = true;
+    document.getElementById("btnImportCancel").disabled = true;
+    const prog = document.getElementById("importProgress");
+    const fill = document.getElementById("importProgressFill");
+    const ptext = document.getElementById("importProgressText");
+    prog.classList.add("show");
+    fill.style.width = "5%";
+    ptext.textContent = "Membaca file...";
+
     try {
-      const text = await file.text();
+      const file = pendingImportFile;
+      const name = file.name.toLowerCase();
       let rows = [];
-      if (file.name.toLowerCase().endsWith(".json") || text.trim().startsWith("[")) {
+
+      if (name.endsWith(".json")) {
+        const text = await file.text();
         rows = JSON.parse(text);
         if (!Array.isArray(rows)) rows = [rows];
+      } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+        // XLSX biner: minta simpan sebagai CSV dari Excel
+        throw new Error("Untuk .xlsx: di Excel pilih File → Simpan Sebagai → CSV (UTF-8), lalu impor file .csv tersebut.");
       } else {
-        // CSV sederhana: baris 1 = header
-        const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((l) => l.trim());
-        if (lines.length < 2) throw new Error("CSV kosong atau tanpa data");
+        const text = await file.text();
+        const lines = text.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((l) => l.trim());
+        if (lines.length < 2) throw new Error("File kosong atau hanya header");
         const headers = parseCsvLine(lines[0]).map((h) => h.trim());
         for (let i = 1; i < lines.length; i++) {
           const vals = parseCsvLine(lines[i]);
           const obj = {};
           headers.forEach((h, j) => {
-            obj[h] = vals[j] != null ? vals[j].trim() : "";
+            obj[h] = vals[j] != null ? String(vals[j]).trim() : "";
           });
           rows.push(obj);
         }
       }
-      // Map header umum → field tabel
-      const keyMap = {
-        "L/P": "jenis_kelamin",
-        "l/p": "jenis_kelamin",
-        Nama: "nama",
-        nama: "nama",
-        NIP: "nip",
-        nip: "nip",
-        NSIN: "nsin",
-        nsin: "nsin",
-        NISN: "nisn",
-        nisn: "nisn",
-        Kelas: "kelas",
-        kelas: "kelas",
-        Status: "status",
-        status: "status",
-        "Asal Sekolah": "asal_sekolah",
-        asal_sekolah: "asal_sekolah",
-        "Pangkat/Gol": "pangkat_gol",
-        pangkat_gol: "pangkat_gol",
-        "Jabatan Struktural": "jabatan_struktural",
-        "Jabatan Fungsional": "jabatan_fungsional",
-        "Tahun Ajaran": "tahun_ajaran",
-        Semester: "semester",
-      };
+
+      fill.style.width = "15%";
+      ptext.textContent = "Menemukan " + rows.length + " baris...";
+
+      const keyMap = {};
+      importHeaders.forEach((label, i) => {
+        keyMap[label] = importKeys[i];
+        keyMap[label.toLowerCase()] = importKeys[i];
+        keyMap[importKeys[i]] = importKeys[i];
+      });
+      // alias umum
+      Object.assign(keyMap, {
+        "L/P": "jenis_kelamin", "l/p": "jenis_kelamin",
+        Nama: "nama", NIP: "nip", NSIN: "nsin", NISN: "nisn",
+        Kelas: "kelas", Status: "status",
+        "Asal Sekolah": "asal_sekolah", "Pangkat/Gol": "pangkat_gol",
+        "Jabatan Struktural": "jabatan_struktural", "Jabatan Fungsional": "jabatan_fungsional",
+        "Tahun Ajaran": "tahun_ajaran", Semester: "semester",
+      });
+
       let ok = 0;
-      for (const raw of rows) {
+      let skip = 0;
+      const total = rows.length;
+      for (let i = 0; i < rows.length; i++) {
+        const raw = rows[i];
         const body = {};
         Object.keys(raw).forEach((k) => {
-          const field = keyMap[k] || k;
+          const field = keyMap[k] || keyMap[k.trim()] || k;
           if (field === "id" || field === "no" || field === "created_at" || field === "updated_at") return;
           let v = raw[k];
           if (v === "" || v === undefined) v = null;
           body[field] = v;
         });
-        if (!body.nama && !body.tahun_ajaran) continue;
-        await window.DB.create(table, body);
-        ok++;
+        if (!body.nama && !body.tahun_ajaran) {
+          skip++;
+        } else {
+          await window.DB.create(table, body);
+          ok++;
+        }
+        const pct = 15 + Math.round(((i + 1) / total) * 85);
+        fill.style.width = pct + "%";
+        ptext.textContent = "Mengimpor " + (i + 1) + " / " + total + " (" + ok + " berhasil" + (skip ? ", " + skip + " dilewati" : "") + ")";
       }
-      window.toast(ok + " data diimpor");
+
+      fill.style.width = "100%";
+      ptext.textContent = "Selesai: " + ok + " data diimpor" + (skip ? ", " + skip + " baris dilewati" : "");
+      window.toast(ok + " data berhasil diimpor");
       load(document.getElementById("searchInput").value.trim());
+      setTimeout(() => {
+        btn.dataset.busy = "0";
+        document.getElementById("btnImportCancel").disabled = false;
+        closeImportModal();
+      }, 900);
     } catch (err) {
+      ptext.textContent = "Gagal: " + (err.message || err);
+      fill.style.background = "#ef4444";
       window.toast("Impor gagal: " + (err.message || err), "error");
+      btn.dataset.busy = "0";
+      btn.disabled = false;
+      document.getElementById("btnImportCancel").disabled = false;
     }
   });
 
