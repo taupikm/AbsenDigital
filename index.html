@@ -1783,45 +1783,64 @@
     }
     .scan-popup-overlay {
       position: fixed;
-      inset: 0;
+      left: 12px;
+      right: 12px;
+      top: 72px;
       z-index: 3000;
-      background: rgba(15,23,42,.5);
       display: flex;
-      align-items: center;
       justify-content: center;
-      padding: 20px;
+      pointer-events: none;
       opacity: 0;
       visibility: hidden;
-      transition: all .2s;
+      transition: opacity .12s ease;
     }
     .scan-popup-overlay.show {
       opacity: 1;
       visibility: visible;
+      pointer-events: auto;
     }
     .scan-popup {
       background: #fff;
-      border-radius: 16px;
-      padding: 24px 22px;
-      max-width: 360px;
+      border-radius: 12px;
+      padding: 12px 16px;
+      max-width: 420px;
       width: 100%;
-      text-align: center;
-      box-shadow: 0 20px 50px rgba(0,0,0,.25);
+      text-align: left;
+      box-shadow: 0 8px 28px rgba(0,0,0,.22);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border-left: 4px solid #10b981;
     }
-    .scan-popup .pop-icon { font-size: 42px; margin-bottom: 10px; }
+    .scan-popup.err {
+      border-left-color: #ef4444;
+    }
+    .scan-popup .pop-icon { font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+    .scan-popup .pop-body { flex: 1; min-width: 0; }
     .scan-popup .pop-title {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 700;
-      color: var(--blue-800);
-      margin-bottom: 6px;
+      color: #065f46;
+      margin-bottom: 2px;
     }
     .scan-popup .pop-msg {
-      font-size: 13.5px;
+      font-size: 12.5px;
       color: var(--gray-600);
-      line-height: 1.45;
-      margin-bottom: 16px;
+      line-height: 1.35;
+      margin: 0;
     }
     .scan-popup.ok .pop-title { color: #065f46; }
     .scan-popup.err .pop-title { color: #991b1b; }
+    .scan-popup .pop-close {
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 2px;
+      flex-shrink: 0;
+    }
     @media (max-width: 640px) {
       .scan-panel { margin: 0 4px; }
       .scan-top-bar .scan-btn { font-size: 12.5px; padding: 11px 10px; }
@@ -4843,14 +4862,11 @@ window.initCrudPage = function (opts) {
       ov.innerHTML =
         '<div class="scan-popup" id="scanPopupBox">' +
         '<div class="pop-icon" id="scanPopIcon"></div>' +
-        '<div class="pop-title" id="scanPopTitle"></div>' +
-        '<div class="pop-msg" id="scanPopMsg"></div>' +
-        '<button type="button" class="btn btn-primary" id="scanPopOk" style="min-width:120px;justify-content:center">OK</button>' +
+        '<div class="pop-body"><div class="pop-title" id="scanPopTitle"></div>' +
+        '<div class="pop-msg" id="scanPopMsg"></div></div>' +
+        '<button type="button" class="pop-close" id="scanPopOk" aria-label="Tutup">&times;</button>' +
         "</div>";
       document.body.appendChild(ov);
-      ov.addEventListener("click", function (e) {
-        if (e.target === ov) ov.classList.remove("show");
-      });
       document.getElementById("scanPopOk").onclick = function () {
         ov.classList.remove("show");
       };
@@ -4860,8 +4876,9 @@ window.initCrudPage = function (opts) {
     document.getElementById("scanPopIcon").textContent = ok ? "✅" : "❌";
     document.getElementById("scanPopTitle").textContent = title || (ok ? "Berhasil" : "Gagal");
     document.getElementById("scanPopMsg").textContent = msg || "";
+    // tampilkan langsung (tanpa menunggu frame berat)
     ov.classList.add("show");
-    if (autoCloseMs == null) autoCloseMs = ok ? 1800 : 2800;
+    if (autoCloseMs == null) autoCloseMs = ok ? 1400 : 2200;
     clearTimeout(window._scanPopupTimer);
     if (autoCloseMs > 0) {
       window._scanPopupTimer = setTimeout(function () {
@@ -5133,6 +5150,8 @@ window.initCrudPage = function (opts) {
       const textKode = String(raw || "").trim();
       if (!textKode || window._scanState.processing) return;
       window._scanState.processing = true;
+      // Notifikasi segera saat kode terbaca (jangan tunggu server)
+      window._scanPopup(true, "Memproses…", textKode, 800);
       try {
         let target = scanTarget;
         if (isGuru || mode === "siswa") target = "siswa";
@@ -5145,12 +5164,11 @@ window.initCrudPage = function (opts) {
           scanner_role: meta.scanner_role,
           mode: "barcode",
         });
-        // Popup dulu, refresh tabel di background (lebih responsif)
-        window._scanPopup(true, "Absensi berhasil", out.message || textKode, 1200);
+        window._scanPopup(true, "Absensi berhasil", out.message || textKode, 1400);
         if (window.DB.invalidate) window.DB.invalidate("absensi");
         loadToday();
       } catch (err) {
-        window._scanPopup(false, "Gagal absensi", String(err.message || err), 2000);
+        window._scanPopup(false, "Gagal absensi", String(err.message || err), 2200);
       } finally {
         window._scanState.processing = false;
       }
