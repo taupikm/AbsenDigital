@@ -1432,6 +1432,85 @@
       align-self: flex-end;
     }
 
+    /* Form filter sejajar: label kiri | field kanan */
+    .filter-form {
+      background: var(--blue-50);
+      border: 1px solid var(--blue-100);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .filter-form .ff-row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      align-items: center;
+      gap: 8px 12px;
+      margin-bottom: 8px;
+    }
+    .filter-form .ff-row:last-child {
+      margin-bottom: 0;
+    }
+    .filter-form .ff-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+    .filter-form .ff-row select {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+    }
+    .filter-form .ff-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .filter-form .ff-actions.cols-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .filter-form .ff-actions .btn {
+      width: 100%;
+      justify-content: center;
+      padding: 9px 8px;
+      font-size: 12.5px;
+    }
+    @media (max-width: 640px) {
+      .filter-form {
+        margin: 0 6px 10px;
+        padding: 10px 8px;
+        border-radius: 10px;
+      }
+      .filter-form .ff-row {
+        grid-template-columns: 100px 1fr;
+        gap: 6px 8px;
+        margin-bottom: 7px;
+      }
+      .filter-form .ff-label {
+        font-size: 12px;
+      }
+      .filter-form .ff-row select {
+        font-size: 12px;
+        padding: 8px 8px;
+      }
+      .filter-form .ff-actions {
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .filter-form .ff-actions .btn {
+        font-size: 11.5px;
+        padding: 8px 4px;
+      }
+      .filter-form .ff-actions .btn .btn-text-full {
+        display: none;
+      }
+    }
+
 
     .page-loading {
       display: flex;
@@ -3382,37 +3461,41 @@ window.initCrudPage = function (opts) {
       .map((n) => '<option value="' + n + '">' + n + "</option>")
       .join("");
 
+    const periodeOpts = periodes
+      .map(
+        (p) =>
+          '<option value="' +
+          p.id +
+          '"' +
+          (p.id === periodeId ? " selected" : "") +
+          ">" +
+          perLabel(p) +
+          (p.status === "Aktif" ? " (Aktif)" : "") +
+          "</option>"
+      )
+      .join("");
+
     main.innerHTML =
       '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-pen-to-square"></i> Input Nilai</h1></div>' +
-      '<div class="periode-filter"><strong>Periode:</strong> <select id="inPeriode">' +
-      periodes
-        .map(
-          (p) =>
-            '<option value="' +
-            p.id +
-            '"' +
-            (p.id === periodeId ? " selected" : "") +
-            ">" +
-            perLabel(p) +
-            (p.status === "Aktif" ? " (Aktif)" : "") +
-            "</option>"
-        )
-        .join("") +
-      '</select></div>' +
-      '<div class="periode-filter" style="flex-wrap:wrap;gap:10px">' +
-      '<label>Filter Kelas <select id="inKelas"><option value="">— pilih —</option></select></label>' +
-      '<label>Jenis Penilaian <select id="inJenis"><option value="">— pilih —</option></select></label>' +
-      '<label>Penilaian Ke <select id="inKe">' +
+      '<div class="filter-form">' +
+      '<div class="ff-row"><span class="ff-label">Periode</span><select id="inPeriode">' +
+      periodeOpts +
+      "</select></div>" +
+      '<div class="ff-row"><span class="ff-label">Kelas</span><select id="inKelas"><option value="">— pilih —</option></select></div>' +
+      '<div class="ff-row"><span class="ff-label">Jenis Penilaian</span><select id="inJenis"><option value="">— pilih —</option></select></div>' +
+      '<div class="ff-row"><span class="ff-label">Penilaian Ke</span><select id="inKe">' +
       keOpts +
-      "</select></label>" +
-      '<button type="button" class="btn btn-primary" id="inLoad"><i class="fas fa-sync"></i> Tampilkan</button>' +
+      "</select></div>" +
+      '<div class="ff-actions">' +
+      '<button type="button" class="btn btn-primary" id="inLoad"><i class="fas fa-sync"></i> Tampil</button>' +
       '<button type="button" class="btn btn-secondary" id="inImport"><i class="fas fa-file-import"></i> Impor</button>' +
       '<button type="button" class="btn btn-primary" id="inSave" disabled><i class="fas fa-save"></i> Simpan</button>' +
+      "</div>" +
       '<input type="file" id="inFile" accept=".csv,.json,text/csv" style="display:none" />' +
       "</div>" +
       '<div class="section-card"><div class="table-wrapper"><table class="data-table crud-table">' +
       '<thead><tr><th class="col-no">No</th><th>NISN</th><th class="col-nama">Nama</th><th style="min-width:100px">Nilai</th></tr></thead>' +
-      '<tbody id="inBody"><tr><td colspan="4" style="text-align:center;padding:28px;color:#64748b">Pilih filter lalu klik Tampilkan</td></tr></tbody>' +
+      '<tbody id="inBody"><tr><td colspan="4" style="text-align:center;padding:28px;color:#64748b">Pilih filter lalu klik Tampil</td></tr></tbody>' +
       '</table></div><div class="table-footer"><span id="inInfo">0 siswa</span></div></div>' +
       '<div class="progress-wrap" id="inProg" style="margin:12px"><div class="progress-bar-bg"><div class="progress-bar-fill" id="inProgFill"></div></div><div class="progress-text" id="inProgText"></div></div>';
 
@@ -3671,29 +3754,34 @@ window.initCrudPage = function (opts) {
       return p ? (p.tahun_ajaran || "") + " · " + (p.semester || "") : "—";
     }
 
+    const dnPeriodeOpts = periodes
+      .map(
+        (p) =>
+          '<option value="' +
+          p.id +
+          '"' +
+          (p.id === periodeId ? " selected" : "") +
+          ">" +
+          perLabel(p) +
+          "</option>"
+      )
+      .join("");
+
     main.innerHTML =
-      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-list-ol"></i> Daftar Nilai</h1>' +
-      '<div class="toolbar-actions">' +
-      '<button type="button" class="btn btn-secondary" id="dnImport"><i class="fas fa-file-import"></i> <span class="btn-text">Impor</span></button>' +
-      '<button type="button" class="btn btn-secondary" id="dnExport"><i class="fas fa-download"></i> <span class="btn-text">Unduh</span></button>' +
-      '<button type="button" class="btn btn-danger" id="dnBulk" disabled><i class="fas fa-trash"></i> <span class="btn-text">Hapus</span></button>' +
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-list-ol"></i> Daftar Nilai</h1></div>' +
+      '<div class="filter-form">' +
+      '<div class="ff-row"><span class="ff-label">Periode</span><select id="dnPeriode">' +
+      dnPeriodeOpts +
+      "</select></div>" +
+      '<div class="ff-row"><span class="ff-label">Kelas</span><select id="dnKelas"><option value="">Semua</option></select></div>' +
+      '<div class="ff-actions cols-4">' +
+      '<button type="button" class="btn btn-primary" id="dnRefresh"><i class="fas fa-sync"></i> Muat</button>' +
+      '<button type="button" class="btn btn-secondary" id="dnImport"><i class="fas fa-file-import"></i> Impor</button>' +
+      '<button type="button" class="btn btn-secondary" id="dnExport"><i class="fas fa-download"></i> Unduh</button>' +
+      '<button type="button" class="btn btn-danger" id="dnBulk" disabled><i class="fas fa-trash"></i> Hapus</button>' +
+      "</div>" +
       '<input type="file" id="dnFile" accept=".csv,text/csv" style="display:none" />' +
-      "</div></div>" +
-      '<div class="periode-filter"><strong>Periode:</strong> <select id="dnPeriode">' +
-      periodes
-        .map(
-          (p) =>
-            '<option value="' +
-            p.id +
-            '"' +
-            (p.id === periodeId ? " selected" : "") +
-            ">" +
-            perLabel(p) +
-            "</option>"
-        )
-        .join("") +
-      '</select> <label style="margin-left:8px">Kelas <select id="dnKelas"><option value="">Semua</option></select></label>' +
-      ' <button type="button" class="btn btn-primary" id="dnRefresh"><i class="fas fa-sync"></i> Muat</button></div>' +
+      "</div>" +
       '<div class="section-card"><div class="table-wrapper"><table class="data-table crud-table" id="dnTable">' +
       '<thead id="dnHead"></thead><tbody id="dnBody"></tbody></table></div>' +
       '<div class="table-footer"><span id="dnInfo">0 data</span></div></div>';
