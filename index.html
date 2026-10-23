@@ -2215,7 +2215,7 @@
         <div class="menu-group-title"><i class="fas fa-cogs"></i> PENGATURAN</div>
         <a href="#/mapel-kelas" class="menu-item" data-page="mapel-kelas"><i class="fas fa-book icon-indigo"></i> Mapel & Kelas</a>
         <a href="#/periode" class="menu-item" data-page="periode"><i class="fas fa-calendar-check icon-green"></i> Periode</a>
-        <a href="#" class="menu-item"><i class="fas fa-clock icon-orange"></i> Sesi & Hari Libur</a>
+        <a href="#/sesi-libur" class="menu-item" data-page="sesi-libur"><i class="fas fa-clock icon-orange"></i> Sesi & Hari Libur</a>
         <a href="#" class="menu-item"><i class="fas fa-hand-pointer icon-purple"></i> Izin Sidik Jari & Ujian</a>
         <a href="#" class="menu-item"><i class="fas fa-box-archive icon-amber"></i> Arsip Absensi</a>
         <a href="#" class="menu-item"><i class="fas fa-arrow-up-right-dots icon-cyan"></i> Naik Kelas & Kelulusan</a>
@@ -2680,6 +2680,33 @@ window.isSupabaseConfigured = function () {
     guru_ampu: [
       {"id":"a1","no":1,"guru_id":"g1","guru_nama":"Budi Santoso","mapel_id":"m4","mapel_nama":"Matematika","kelas_id":"k1","kelas_nama":"7A","periode_id":"p1","tahun_ajaran":"2026/2027","semester":"Ganjil"}
     ],
+    setting_sesi: [
+      {
+        id: "ss1",
+        no: 1,
+        nama: "Sesi 1",
+        urutan: 1,
+        waktu_1: "06:15",
+        waktu_2: "07:30",
+        waktu_3: "08:00",
+        aktif: true,
+      },
+      {
+        id: "ss2",
+        no: 2,
+        nama: "Sesi 2",
+        urutan: 2,
+        waktu_1: "09:45",
+        waktu_2: "12:45",
+        waktu_3: "13:00",
+        aktif: true,
+      },
+    ],
+    hari_libur: [
+      { id: "hl1", no: 1, tanggal: "2026-10-17", keterangan: "Libur Hari Sabtu" },
+      { id: "hl2", no: 2, tanggal: "2026-10-18", keterangan: "Libur Hari Minggu" },
+    ],
+    absensi: [],
   };
 
   function ensureSeed(table) {
@@ -4678,23 +4705,34 @@ window.initCrudPage = function (opts) {
     // Admin: toggle target; Guru: selalu siswa
     let scanTarget = "siswa";
 
-    let cfg = {
-      jam_buka_masuk: "06:00",
-      batas_tepat_waktu: "07:00",
-      batas_scan_masuk: "08:00",
-      jam_buka_sesi2: "09:30",
-      batas_tepat_sesi2: "10:00",
-      batas_scan_sesi2: "10:30",
-      jam_buka_pulang: "12:00",
-      batas_pulang_tepat: "13:00",
-      jam_tutup_pulang: "16:00",
-      sesi1_aktif: true,
-      sesi2_aktif: true,
-      sesi3_aktif: true,
-    };
+    // Sesi dinamis dari tabel setting_sesi (+ fallback)
+    let sesiList = [];
     try {
-      const pr = await window.DB.list("pengaturan_absensi");
-      if (pr.data && pr.data[0]) cfg = Object.assign(cfg, pr.data[0]);
+      const sr = await window.DB.list("setting_sesi");
+      sesiList = (sr.data || [])
+        .filter((s) => s.aktif === true || s.aktif === "true" || s.aktif === 1 || s.aktif == null)
+        .sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+    } catch (e) {
+      sesiList = [];
+    }
+    if (!sesiList.length) {
+      sesiList = [
+        { id: "ss1", nama: "Sesi 1", urutan: 1, waktu_1: "06:15", waktu_2: "07:30", waktu_3: "08:00", aktif: true },
+        { id: "ss2", nama: "Sesi 2", urutan: 2, waktu_1: "09:45", waktu_2: "12:45", waktu_3: "13:00", aktif: true },
+      ];
+    }
+
+    // Cek hari libur
+    let isLibur = false;
+    let ketLibur = "";
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const hl = await window.DB.list("hari_libur");
+      const hit = (hl.data || []).find((h) => h.tanggal === today);
+      if (hit) {
+        isLibur = true;
+        ketLibur = hit.keterangan || "Hari libur";
+      }
     } catch (e) {}
 
     function nowHM() {
@@ -4706,37 +4744,32 @@ window.initCrudPage = function (opts) {
       return parseInt(p[0], 10) * 60 + parseInt(p[1] || "0", 10);
     }
     function detectSesi() {
+      if (isLibur) return null;
       const m = toMin(nowHM());
-      if (cfg.sesi1_aktif && m >= toMin(cfg.jam_buka_masuk) && m <= toMin(cfg.batas_scan_masuk))
-        return { sesi: "Masuk", status: m <= toMin(cfg.batas_tepat_waktu) ? "TW" : "TL", label: "Sesi 1 · Masuk", n: 1 };
-      if (cfg.sesi2_aktif && m >= toMin(cfg.jam_buka_sesi2) && m <= toMin(cfg.batas_scan_sesi2))
-        return { sesi: "Sesi2", status: m <= toMin(cfg.batas_tepat_sesi2) ? "TW" : "TL", label: "Sesi 2 · Istirahat", n: 2 };
-      if (cfg.sesi3_aktif && m >= toMin(cfg.jam_buka_pulang) && m <= toMin(cfg.jam_tutup_pulang))
-        return { sesi: "Pulang", status: m <= toMin(cfg.batas_pulang_tepat) ? "TW" : "TL", label: "Sesi 3 · Pulang", n: 3 };
-      return null;
-    }
-    /** Daftar sesi aktif (dinamis dari pengaturan) */
-    function listSesiAktif() {
-      const list = [];
-      if (cfg.sesi1_aktif !== false)
-        list.push({ key: "Masuk", label: "Sesi 1", sub: "Masuk", open: cfg.jam_buka_masuk, close: cfg.batas_scan_masuk });
-      if (cfg.sesi2_aktif !== false)
-        list.push({ key: "Sesi2", label: "Sesi 2", sub: "Istirahat", open: cfg.jam_buka_sesi2, close: cfg.batas_scan_sesi2 });
-      if (cfg.sesi3_aktif !== false)
-        list.push({ key: "Pulang", label: "Sesi 3", sub: "Pulang", open: cfg.jam_buka_pulang, close: cfg.jam_tutup_pulang });
-      // sesi tambahan dari pengaturan (sesi4_aktif …)
-      for (let i = 4; i <= 12; i++) {
-        if (cfg["sesi" + i + "_aktif"]) {
-          list.push({
-            key: "Sesi" + i,
-            label: "Sesi " + i,
-            sub: cfg["sesi" + i + "_nama"] || ("Sesi " + i),
-            open: cfg["jam_buka_sesi" + i] || "",
-            close: cfg["batas_scan_sesi" + i] || "",
-          });
+      for (const s of sesiList) {
+        const w1 = toMin(s.waktu_1);
+        const w2 = toMin(s.waktu_2);
+        const w3 = toMin(s.waktu_3);
+        if (m >= w1 && m <= w3) {
+          return {
+            sesi: s.nama || ("Sesi " + s.urutan),
+            status: m <= w2 ? "TW" : "TL",
+            label: s.nama || ("Sesi " + s.urutan),
+            n: s.urutan || 0,
+            id: s.id,
+          };
         }
       }
-      return list;
+      return null;
+    }
+    function listSesiAktif() {
+      return sesiList.map((s) => ({
+        key: s.nama || ("Sesi " + s.urutan),
+        label: s.nama || ("Sesi " + s.urutan),
+        sub: (s.waktu_1 || "") + "–" + (s.waktu_3 || ""),
+        open: s.waktu_1,
+        close: s.waktu_3,
+      }));
     }
 
     function fpKey() {
@@ -4761,7 +4794,7 @@ window.initCrudPage = function (opts) {
     const icon = mode === "siswa" ? "fa-fingerprint" : "fa-qrcode";
     const sesiNow = detectSesi();
     const sesiAktif = !!sesiNow;
-    const lockCam = isGuru && mode !== "siswa" && !sesiAktif;
+    const lockCam = (isGuru && mode !== "siswa" && !sesiAktif) || (isGuru && isLibur);
     const sessions = listSesiAktif();
 
     // Tombol kiri: sidik jari (guru) ATAU toggle Guru/Siswa (admin)
@@ -4814,9 +4847,13 @@ window.initCrudPage = function (opts) {
       "</h1></div>" +
       '<div class="scan-panel">' +
       topBar +
-      (lockCam
-        ? '<p style="font-size:12px;color:#b91c1c;margin:0 0 10px"><i class="fas fa-lock"></i> Tidak ada sesi aktif — kamera dikunci</p>'
-        : "") +
+      (isLibur
+        ? '<p style="font-size:12px;color:#b91c1c;margin:0 0 10px"><i class="fas fa-calendar-times"></i> Hari libur' +
+          (ketLibur ? ": " + ketLibur : "") +
+          " — absensi ditutup</p>"
+        : lockCam
+          ? '<p style="font-size:12px;color:#b91c1c;margin:0 0 10px"><i class="fas fa-lock"></i> Tidak ada sesi aktif — kamera dikunci</p>'
+          : "") +
       '<div class="scan-cam-box' +
       (lockCam ? " locked" : "") +
       '" id="' +
@@ -5145,6 +5182,424 @@ window.initCrudPage = function (opts) {
     loadToday();
   };
 
+
+
+
+  // ========== SESI & HARI LIBUR ==========
+  window.initSesiLiburPage = async function () {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.classList.add("crud-page");
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    document.querySelector('.menu-item[data-page="sesi-libur"]')?.classList.add("active");
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (m) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])
+      );
+    }
+
+    main.innerHTML =
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-clock"></i> Sesi &amp; Hari Libur</h1></div>' +
+      '<div class="tabs-bar">' +
+      '<button type="button" class="tab-btn active" data-tab="sesi">Setting Sesi</button>' +
+      '<button type="button" class="tab-btn" data-tab="hapus">Hapus Absensi per Sesi</button>' +
+      '<button type="button" class="tab-btn" data-tab="libur">Hari Libur</button>' +
+      '</div><div id="slHost"></div>';
+
+    let tab = "sesi";
+    main.querySelectorAll(".tab-btn").forEach((b) => {
+      b.addEventListener("click", () => {
+        tab = b.dataset.tab;
+        main.querySelectorAll(".tab-btn").forEach((x) => x.classList.toggle("active", x.dataset.tab === tab));
+        mount();
+      });
+    });
+
+    async function loadSesi() {
+      const res = await window.DB.list("setting_sesi").catch(() => ({ data: [] }));
+      return (res.data || []).slice().sort((a, b) => (a.urutan || 0) - (b.urutan || 0));
+    }
+    async function loadLibur() {
+      const res = await window.DB.list("hari_libur").catch(() => ({ data: [] }));
+      return (res.data || []).slice().sort((a, b) => String(a.tanggal).localeCompare(String(b.tanggal)));
+    }
+
+    async function mount() {
+      const host = document.getElementById("slHost");
+      if (!host) return;
+      if (tab === "sesi") await renderSesi(host);
+      else if (tab === "hapus") await renderHapus(host);
+      else await renderLibur(host);
+    }
+
+    // ----- Setting Sesi -----
+    async function renderSesi(host) {
+      let rows = await loadSesi();
+      host.innerHTML =
+        '<div class="page-toolbar" style="margin-top:4px">' +
+        '<h2 class="page-title" style="font-size:15px">Setting Sesi</h2>' +
+        '<div class="toolbar-actions">' +
+        '<button type="button" class="btn btn-primary" id="ssAdd"><i class="fas fa-plus"></i> Tambah</button>' +
+        '<button type="button" class="btn btn-secondary" id="ssEdit" disabled style="background:#059669;color:#fff;border:none"><i class="fas fa-pen"></i> Edit</button>' +
+        '<button type="button" class="btn btn-danger" id="ssDel" disabled><i class="fas fa-trash"></i></button>' +
+        '<span style="font-size:12px;color:#64748b;margin-left:8px" id="ssCount">' +
+        rows.length +
+        " data</span></div></div>" +
+        '<div class="section-card"><div class="table-wrapper"><table class="data-table crud-table">' +
+        '<thead><tr><th class="col-check"><input type="checkbox" id="ssCheckAll" /></th>' +
+        "<th>No</th><th>Nama</th><th>Urutan</th><th>Waktu 1</th><th>Waktu 2</th><th>Waktu 3</th><th>Aktif</th><th class=\"col-aksi\">Aksi</th></tr></thead>" +
+        '<tbody id="ssBody"></tbody></table></div></div>' +
+        '<div class="modal-overlay" id="ssModal"><div class="modal" style="max-width:480px">' +
+        '<div class="modal-header"><h2 id="ssModalTitle">Tambah Sesi</h2><button type="button" class="modal-close" id="ssModalClose">&times;</button></div>' +
+        '<form id="ssForm" class="modal-body"><input type="hidden" id="ssId" />' +
+        '<div class="form-grid" style="grid-template-columns:1fr">' +
+        '<div class="form-group"><label>Nama *</label><input type="text" id="ssNama" required placeholder="Sesi 1" /></div>' +
+        '<div class="form-group"><label>Urutan *</label><input type="number" id="ssUrutan" required min="1" value="1" /></div>' +
+        '<div class="form-group"><label>Waktu 1 (buka) *</label><input type="time" id="ssW1" required /></div>' +
+        '<div class="form-group"><label>Waktu 2 (batas tepat waktu) *</label><input type="time" id="ssW2" required /></div>' +
+        '<div class="form-group"><label>Waktu 3 (batas scan) *</label><input type="time" id="ssW3" required /></div>' +
+        '<div class="form-group"><label>Status</label><select id="ssAktif"><option value="true">Aktif</option><option value="false">Nonaktif</option></select></div>' +
+        '</div><div class="modal-footer"><button type="button" class="btn btn-ghost" id="ssCancel">Batal</button>' +
+        '<button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>';
+
+      function paint() {
+        const body = document.getElementById("ssBody");
+        document.getElementById("ssCount").textContent = rows.length + " data";
+        if (!rows.length) {
+          body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#64748b">Belum ada sesi</td></tr>';
+          return;
+        }
+        body.innerHTML = rows
+          .map((r, i) => {
+            const aktif = r.aktif === true || r.aktif === "true" || r.aktif === 1;
+            return (
+              '<tr><td class="col-check"><input type="checkbox" class="ss-check" data-id="' +
+              r.id +
+              '" /></td><td>' +
+              (i + 1) +
+              "</td><td>" +
+              esc(r.nama) +
+              "</td><td>" +
+              (r.urutan != null ? r.urutan : "—") +
+              "</td><td>" +
+              esc(r.waktu_1 || "—") +
+              "</td><td>" +
+              esc(r.waktu_2 || "—") +
+              "</td><td>" +
+              esc(r.waktu_3 || "—") +
+              '</td><td><span class="badge ' +
+              (aktif ? "badge-hadir" : "badge-alpa") +
+              '">' +
+              (aktif ? "Aktif" : "Nonaktif") +
+              '</span></td><td class="aksi">' +
+              '<button type="button" class="btn-icon btn-edit" data-id="' +
+              r.id +
+              '"><i class="fas fa-pen"></i></button> ' +
+              '<button type="button" class="btn-icon btn-del" data-id="' +
+              r.id +
+              '"><i class="fas fa-trash"></i></button></td></tr>'
+            );
+          })
+          .join("");
+
+        const syncBulk = () => {
+          const n = body.querySelectorAll(".ss-check:checked").length;
+          document.getElementById("ssEdit").disabled = n !== 1;
+          document.getElementById("ssDel").disabled = n === 0;
+        };
+        body.querySelectorAll(".ss-check").forEach((c) => c.addEventListener("change", syncBulk));
+        document.getElementById("ssCheckAll").onchange = (e) => {
+          body.querySelectorAll(".ss-check").forEach((c) => (c.checked = e.target.checked));
+          syncBulk();
+        };
+        body.querySelectorAll(".btn-edit").forEach((b) =>
+          b.addEventListener("click", () => openForm(b.dataset.id))
+        );
+        body.querySelectorAll(".btn-del").forEach((b) =>
+          b.addEventListener("click", async () => {
+            if (!confirm("Hapus sesi ini?")) return;
+            await window.DB.remove("setting_sesi", b.dataset.id);
+            window.toast("Sesi dihapus");
+            rows = await loadSesi();
+            paint();
+          })
+        );
+      }
+
+      function openForm(id) {
+        const row = id ? rows.find((r) => r.id === id) : null;
+        document.getElementById("ssId").value = id || "";
+        document.getElementById("ssModalTitle").textContent = id ? "Edit Sesi" : "Tambah Sesi";
+        document.getElementById("ssNama").value = row ? row.nama || "" : "";
+        document.getElementById("ssUrutan").value = row ? row.urutan || 1 : rows.length + 1;
+        document.getElementById("ssW1").value = row ? row.waktu_1 || "" : "";
+        document.getElementById("ssW2").value = row ? row.waktu_2 || "" : "";
+        document.getElementById("ssW3").value = row ? row.waktu_3 || "" : "";
+        document.getElementById("ssAktif").value =
+          row && (row.aktif === false || row.aktif === "false") ? "false" : "true";
+        document.getElementById("ssModal").classList.add("show");
+      }
+
+      document.getElementById("ssModalClose").onclick = () =>
+        document.getElementById("ssModal").classList.remove("show");
+      document.getElementById("ssCancel").onclick = () =>
+        document.getElementById("ssModal").classList.remove("show");
+      document.getElementById("ssAdd").onclick = () => openForm(null);
+      document.getElementById("ssEdit").onclick = () => {
+        const c = document.querySelector(".ss-check:checked");
+        if (c) openForm(c.dataset.id);
+      };
+      document.getElementById("ssDel").onclick = async () => {
+        const ids = Array.from(document.querySelectorAll(".ss-check:checked")).map((c) => c.dataset.id);
+        if (!ids.length || !confirm("Hapus " + ids.length + " sesi?")) return;
+        for (const id of ids) await window.DB.remove("setting_sesi", id);
+        window.toast(ids.length + " sesi dihapus");
+        rows = await loadSesi();
+        paint();
+      };
+      document.getElementById("ssForm").onsubmit = async (ev) => {
+        ev.preventDefault();
+        const id = document.getElementById("ssId").value;
+        const body = {
+          nama: document.getElementById("ssNama").value.trim(),
+          urutan: parseInt(document.getElementById("ssUrutan").value, 10) || 1,
+          waktu_1: document.getElementById("ssW1").value,
+          waktu_2: document.getElementById("ssW2").value,
+          waktu_3: document.getElementById("ssW3").value,
+          aktif: document.getElementById("ssAktif").value === "true",
+        };
+        try {
+          if (id) await window.DB.update("setting_sesi", id, body);
+          else await window.DB.create("setting_sesi", body);
+          window.toast(id ? "Sesi diperbarui" : "Sesi ditambahkan");
+          document.getElementById("ssModal").classList.remove("show");
+          rows = await loadSesi();
+          paint();
+        } catch (e) {
+          window.toast(String(e.message || e), "error");
+        }
+      };
+      paint();
+    }
+
+    // ----- Hapus Absensi per Sesi -----
+    async function renderHapus(host) {
+      const sessions = await loadSesi();
+      const sesiOpts = sessions
+        .map((s) => '<option value="' + esc(s.nama || s.id) + '">' + esc(s.nama) + "</option>")
+        .join("");
+      const today = new Date().toISOString().slice(0, 10);
+
+      host.innerHTML =
+        '<div class="section-card" style="border-color:#fecaca;background:#fff5f5">' +
+        '<div class="section-title" style="color:#b91c1c;border-bottom-color:#fecaca">' +
+        '<i class="fas fa-trash" style="color:#ef4444"></i> Hapus Data Absensi per Sesi</div>' +
+        '<p style="font-size:12.5px;color:#7f1d1d;margin:0 0 14px;line-height:1.5">' +
+        "Menghapus <strong>semua data absensi</strong> (semua user) pada sesi &amp; rentang tanggal yang dipilih. " +
+        "Dipakai jika sesi gagal (listrik padam, sinyal hilang, error aplikasi) agar bisa diulang. " +
+        "<strong>Pengaturan sesi (jam) tidak dihapus</strong> — hanya data scan di tabel absensi.</p>" +
+        '<div class="filter-form" style="background:#fff;border-color:#fecaca">' +
+        '<div class="ff-row"><span class="ff-label">Dari Tanggal</span><input type="date" id="haDari" value="' +
+        today +
+        '" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit" /></div>' +
+        '<div class="ff-row"><span class="ff-label">Sampai Tanggal</span><input type="date" id="haSampai" value="' +
+        today +
+        '" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-family:inherit" /></div>' +
+        '<div class="ff-row"><span class="ff-label">Sesi</span><select id="haSesi"><option value="">- Pilih Sesi -</option>' +
+        sesiOpts +
+        "</select></div>" +
+        '<div class="ff-row"><span class="ff-label">Tipe</span><select id="haTipe">' +
+        '<option value="">Semua (Siswa + Guru)</option>' +
+        '<option value="siswa">Siswa</option><option value="guru">Guru</option></select></div>' +
+        '<div id="haInfo" style="font-size:12.5px;color:#64748b;margin:10px 0;padding:10px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0">' +
+        "Pilih rentang tanggal &amp; sesi, lalu cek jumlah data.</div>" +
+        '<div class="ff-actions" style="grid-template-columns:1fr 1fr">' +
+        '<button type="button" class="btn btn-secondary" id="haCek"><i class="fas fa-search"></i> Cek Jumlah Data</button>' +
+        '<button type="button" class="btn btn-danger" id="haHapus" disabled><i class="fas fa-trash"></i> Hapus Data</button>' +
+        "</div></div></div>";
+
+      let matchedIds = [];
+
+      async function findMatches() {
+        const dari = document.getElementById("haDari").value;
+        const sampai = document.getElementById("haSampai").value;
+        const sesi = document.getElementById("haSesi").value;
+        const tipe = document.getElementById("haTipe").value;
+        if (!dari || !sampai) throw new Error("Isi rentang tanggal");
+        if (!sesi) throw new Error("Pilih sesi");
+        const res = await window.DB.list("absensi").catch(() => ({ data: [] }));
+        const rows = (res.data || []).filter((r) => {
+          const t = r.tanggal || "";
+          if (t < dari || t > sampai) return false;
+          if (sesi && r.sesi !== sesi && r.sesi !== sesi.replace(/\s+/g, "")) {
+            // match by nama sesi also
+            if (String(r.sesi || "").toLowerCase() !== String(sesi).toLowerCase()) return false;
+          }
+          if (tipe && r.tipe !== tipe) return false;
+          return true;
+        });
+        matchedIds = rows.map((r) => r.id).filter(Boolean);
+        return rows;
+      }
+
+      document.getElementById("haCek").onclick = async () => {
+        const info = document.getElementById("haInfo");
+        try {
+          const rows = await findMatches();
+          info.innerHTML =
+            '<strong style="color:#1e40af">' +
+            rows.length +
+            "</strong> data absensi cocok dengan filter. " +
+            (rows.length ? "Klik Hapus Data untuk menghapus." : "Tidak ada yang dihapus.");
+          document.getElementById("haHapus").disabled = rows.length === 0;
+        } catch (e) {
+          info.textContent = e.message || String(e);
+          document.getElementById("haHapus").disabled = true;
+          window.toast(String(e.message || e), "error");
+        }
+      };
+
+      document.getElementById("haHapus").onclick = async () => {
+        try {
+          const rows = await findMatches();
+          if (!rows.length) return window.toast("Tidak ada data", "error");
+          if (!confirm("Hapus " + rows.length + " data absensi? Tindakan ini tidak bisa dibatalkan.")) return;
+          for (const r of rows) {
+            if (r.id) await window.DB.remove("absensi", r.id);
+          }
+          if (window.DB.invalidate) window.DB.invalidate("absensi");
+          window.toast(rows.length + " data absensi dihapus");
+          document.getElementById("haInfo").innerHTML =
+            '<strong style="color:#059669">Selesai.</strong> ' + rows.length + " data dihapus.";
+          document.getElementById("haHapus").disabled = true;
+          matchedIds = [];
+        } catch (e) {
+          window.toast(String(e.message || e), "error");
+        }
+      };
+    }
+
+    // ----- Hari Libur -----
+    async function renderLibur(host) {
+      let rows = await loadLibur();
+      host.innerHTML =
+        '<div class="page-toolbar" style="margin-top:4px">' +
+        '<h2 class="page-title" style="font-size:15px">Hari Libur</h2>' +
+        '<div class="toolbar-actions">' +
+        '<button type="button" class="btn btn-primary" id="hlAdd"><i class="fas fa-plus"></i> Tambah</button>' +
+        '<button type="button" class="btn btn-danger" id="hlDel" disabled><i class="fas fa-trash"></i></button>' +
+        '<span style="font-size:12px;color:#64748b;margin-left:8px" id="hlCount">' +
+        rows.length +
+        " data</span></div></div>" +
+        '<div class="section-card"><div class="table-wrapper"><table class="data-table crud-table">' +
+        '<thead><tr><th class="col-check"><input type="checkbox" id="hlCheckAll" /></th>' +
+        "<th>No</th><th>Tanggal</th><th>Keterangan</th><th class=\"col-aksi\">Aksi</th></tr></thead>" +
+        '<tbody id="hlBody"></tbody></table></div></div>' +
+        '<div class="modal-overlay" id="hlModal"><div class="modal" style="max-width:420px">' +
+        '<div class="modal-header"><h2 id="hlModalTitle">Tambah Hari Libur</h2><button type="button" class="modal-close" id="hlModalClose">&times;</button></div>' +
+        '<form id="hlForm" class="modal-body"><input type="hidden" id="hlId" />' +
+        '<div class="form-grid" style="grid-template-columns:1fr">' +
+        '<div class="form-group"><label>Tanggal *</label><input type="date" id="hlTgl" required /></div>' +
+        '<div class="form-group"><label>Keterangan *</label><input type="text" id="hlKet" required placeholder="Libur nasional / cuti bersama" /></div>' +
+        '</div><div class="modal-footer"><button type="button" class="btn btn-ghost" id="hlCancel">Batal</button>' +
+        '<button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button></div></form></div></div>';
+
+      function paint() {
+        const body = document.getElementById("hlBody");
+        document.getElementById("hlCount").textContent = rows.length + " data";
+        if (!rows.length) {
+          body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:#64748b">Belum ada hari libur</td></tr>';
+          return;
+        }
+        body.innerHTML = rows
+          .map((r, i) => {
+            return (
+              '<tr><td class="col-check"><input type="checkbox" class="hl-check" data-id="' +
+              r.id +
+              '" /></td><td>' +
+              (i + 1) +
+              "</td><td>" +
+              esc(r.tanggal) +
+              "</td><td>" +
+              esc(r.keterangan) +
+              '</td><td class="aksi">' +
+              '<button type="button" class="btn-icon btn-edit" data-id="' +
+              r.id +
+              '"><i class="fas fa-pen"></i></button> ' +
+              '<button type="button" class="btn-icon btn-del" data-id="' +
+              r.id +
+              '"><i class="fas fa-trash"></i></button></td></tr>'
+            );
+          })
+          .join("");
+        const sync = () => {
+          document.getElementById("hlDel").disabled = !body.querySelectorAll(".hl-check:checked").length;
+        };
+        body.querySelectorAll(".hl-check").forEach((c) => c.addEventListener("change", sync));
+        document.getElementById("hlCheckAll").onchange = (e) => {
+          body.querySelectorAll(".hl-check").forEach((c) => (c.checked = e.target.checked));
+          sync();
+        };
+        body.querySelectorAll(".btn-edit").forEach((b) =>
+          b.addEventListener("click", () => openForm(b.dataset.id))
+        );
+        body.querySelectorAll(".btn-del").forEach((b) =>
+          b.addEventListener("click", async () => {
+            if (!confirm("Hapus hari libur ini?")) return;
+            await window.DB.remove("hari_libur", b.dataset.id);
+            window.toast("Dihapus");
+            rows = await loadLibur();
+            paint();
+          })
+        );
+      }
+
+      function openForm(id) {
+        const row = id ? rows.find((r) => r.id === id) : null;
+        document.getElementById("hlId").value = id || "";
+        document.getElementById("hlModalTitle").textContent = id ? "Edit Hari Libur" : "Tambah Hari Libur";
+        document.getElementById("hlTgl").value = row ? row.tanggal || "" : "";
+        document.getElementById("hlKet").value = row ? row.keterangan || "" : "";
+        document.getElementById("hlModal").classList.add("show");
+      }
+
+      document.getElementById("hlModalClose").onclick = () =>
+        document.getElementById("hlModal").classList.remove("show");
+      document.getElementById("hlCancel").onclick = () =>
+        document.getElementById("hlModal").classList.remove("show");
+      document.getElementById("hlAdd").onclick = () => openForm(null);
+      document.getElementById("hlDel").onclick = async () => {
+        const ids = Array.from(document.querySelectorAll(".hl-check:checked")).map((c) => c.dataset.id);
+        if (!ids.length || !confirm("Hapus " + ids.length + " data?")) return;
+        for (const id of ids) await window.DB.remove("hari_libur", id);
+        window.toast(ids.length + " data dihapus");
+        rows = await loadLibur();
+        paint();
+      };
+      document.getElementById("hlForm").onsubmit = async (ev) => {
+        ev.preventDefault();
+        const id = document.getElementById("hlId").value;
+        const body = {
+          tanggal: document.getElementById("hlTgl").value,
+          keterangan: document.getElementById("hlKet").value.trim(),
+        };
+        try {
+          if (id) await window.DB.update("hari_libur", id, body);
+          else await window.DB.create("hari_libur", body);
+          window.toast(id ? "Diperbarui" : "Ditambahkan");
+          document.getElementById("hlModal").classList.remove("show");
+          rows = await loadLibur();
+          paint();
+        } catch (e) {
+          window.toast(String(e.message || e), "error");
+        }
+      };
+      paint();
+    }
+
+    await mount();
+  };
 
 
   // ========== AUTH (login sementara) ==========
@@ -5660,6 +6115,14 @@ window.initCrudPage = function (opts) {
       setActiveMenu("scan-barcode");
       showPageLoading(main, "Scan Barcode");
       try { await window.initScanPage("guru"); }
+      catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
+      return;
+    }
+    if (hash === "sesi-libur" || hash === "sesi" || hash === "hari-libur") {
+      if (window.AUTH.role() !== "admin") { location.hash = "#/"; return; }
+      setActiveMenu("sesi-libur");
+      showPageLoading(main, "Sesi & Hari Libur");
+      try { await window.initSesiLiburPage(); }
       catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
       return;
     }
