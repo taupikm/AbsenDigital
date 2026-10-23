@@ -1608,7 +1608,7 @@
       position: fixed;
       inset: 0;
       z-index: 9999;
-      background: linear-gradient(145deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
+      background: rgba(15, 23, 42, 0.55);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1708,12 +1708,29 @@
       text-align: center;
     }
     .menu-group[data-role].role-hidden { display: none !important; }
+    /* Tamu: hanya DASHBOARD */
+    body.role-guest .menu-group[data-role="siswa"],
+    body.role-guest .menu-group[data-role="guru"],
+    body.role-guest .menu-group[data-role="admin"],
+    body.role-guest .menu-group[data-role="pengaturan"] { display: none !important; }
     body.role-siswa .menu-group[data-role="guru"],
     body.role-siswa .menu-group[data-role="admin"],
     body.role-siswa .menu-group[data-role="pengaturan"] { display: none !important; }
     body.role-guru .menu-group[data-role="siswa"],
     body.role-guru .menu-group[data-role="admin"],
     body.role-guru .menu-group[data-role="pengaturan"] { display: none !important; }
+    .btn-top-login {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-top-login:hover { background: rgba(255,255,255,0.3); }
 
   /* ========== PAGE TOOLBAR & CRUD ========== */
 .page-toolbar {
@@ -1911,33 +1928,26 @@
 </head>
 <body>
 
-  <!-- LOGIN -->
-  <div class="login-overlay" id="loginOverlay">
+  <!-- LOGIN (satu kolom) -->
+  <div class="login-overlay hidden" id="loginOverlay">
     <div class="login-card">
-      <h1><i class="fas fa-graduation-cap" style="color:#2563eb"></i> Login Aplikasi</h1>
-      <p class="sub">Sistem Informasi Sekolah · uji sementara</p>
-      <div class="login-tabs">
-        <button type="button" class="active" data-login-tab="siswa">Siswa</button>
-        <button type="button" data-login-tab="guru">Guru</button>
-        <button type="button" data-login-tab="admin">Admin</button>
-      </div>
+      <h1><i class="fas fa-lock" style="color:#2563eb"></i> Masuk</h1>
+      <p class="sub">NISN 10 digit (siswa) · PIN 6 digit (guru/admin)</p>
       <div class="login-error" id="loginError"></div>
-      <div class="login-field" id="loginFieldSiswa">
-        <label>NISN / NSIN</label>
-        <input type="text" id="loginNisn" placeholder="Masukkan NISN atau NSIN" autocomplete="username" />
-      </div>
-      <div class="login-field" id="loginFieldPin" style="display:none">
-        <label>PIN</label>
-        <input type="password" id="loginPin" placeholder="Masukkan PIN" autocomplete="current-password" />
+      <div class="login-field">
+        <label>NISN / PIN</label>
+        <input type="text" id="loginKode" placeholder="Ketik NISN atau PIN" inputmode="numeric" autocomplete="username" />
       </div>
       <button type="button" class="btn-login" id="btnDoLogin"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+      <button type="button" class="btn btn-ghost" id="btnLoginCancel" style="width:100%;margin-top:8px;justify-content:center">Batal</button>
       <p class="login-hint">
-        Siswa: NISN/NSIN dari Data Siswa<br/>
-        Guru: PIN di Data Guru<br/>
-        Admin: PIN admin (default <b>9999</b>)
+        Siswa: NISN/NSIN 10 digit<br/>
+        Guru: PIN 6 digit (Data Guru)<br/>
+        Admin: PIN 6 digit (default 999999)
       </p>
     </div>
   </div>
+
 
   <!-- TOPBAR -->
   <header class="topbar">
@@ -1960,7 +1970,8 @@
         <span class="notif-badge">3</span>
       </button>
       <div class="profile-wrapper">
-        <button class="profile-btn" id="profileBtn">
+        <button type="button" class="btn-top-login" id="btnTopLogin"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+        <button class="profile-btn" id="profileBtn" style="display:none" style="display:none">
           <div class="avatar">AS</div>
           <i class="fas fa-chevron-down" style="font-size:11px;opacity:0.8"></i>
         </button>
@@ -2030,7 +2041,9 @@
         <a href="#" class="menu-item"><i class="fas fa-hand-pointer icon-purple"></i> Izin Sidik Jari & Ujian</a>
         <a href="#" class="menu-item"><i class="fas fa-box-archive icon-amber"></i> Arsip Absensi</a>
         <a href="#" class="menu-item"><i class="fas fa-arrow-up-right-dots icon-cyan"></i> Naik Kelas & Kelulusan</a>
-        <a href="#" class="menu-item"><i class="fas fa-key icon-red"></i> Reset PIN</a>
+        <a href="#/reset-pin-admin" class="menu-item" data-page="reset-pin-admin"><i class="fas fa-key icon-red"></i> Reset PIN Admin</a>
+        <a href="#/reset-pin-guru" class="menu-item" data-page="reset-pin-guru"><i class="fas fa-user-lock icon-orange"></i> Reset PIN Guru</a>
+        <a href="#/proteksi-periode" class="menu-item" data-page="proteksi-periode"><i class="fas fa-shield-alt icon-indigo"></i> Proteksi Periode</a>
         <a href="#" class="menu-item"><i class="fas fa-id-card icon-pink"></i> Edit Profil User</a>
         <a href="#" class="menu-item"><i class="fas fa-school icon-blue"></i> Data Sekolah</a>
         <a href="#" class="menu-item"><i class="fab fa-google-drive icon-green"></i> Integrasi GDrive</a>
@@ -2378,13 +2391,13 @@ window.APP_CONFIG = {
 
   // Edge Function base (opsional). Jika kosong, pakai REST langsung ke tabel.
   // Contoh: https://YOUR_PROJECT.supabase.co/functions/v1/api
-  EDGE_FUNCTION_URL: "",
+  EDGE_FUNCTION_URL: "https://jlfuxesxnxmyykdbmjrt.supabase.co/functions/v1/api",
 
   // true = pakai localStorage jika Supabase belum dikonfigurasi
   DEMO_MODE: true,
 
   // Login sementara (uji)
-  ADMIN_PIN: "9999",
+  ADMIN_PIN: "999999", // 6 digit — diganti lewat Reset PIN Admin,
 };
 
 /** Cek apakah kredensial sudah diisi */
@@ -2668,6 +2681,99 @@ window.isSupabaseConfigured = function () {
     }
   }
 
+  /** Edge Function client (utama) — fallback REST anon / localStorage */
+  const edgeAPI = {
+    base() {
+      const c = window.APP_CONFIG;
+      return (c.EDGE_FUNCTION_URL || "").replace(/\/$/, "");
+    },
+    enabled() {
+      return !!this.base() && !this.base().includes("YOUR_");
+    },
+    headers() {
+      const c = window.APP_CONFIG;
+      return {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + (c.SUPABASE_ANON_KEY || ""),
+        apikey: c.SUPABASE_ANON_KEY || "",
+      };
+    },
+    async list(table, params) {
+      const q = new URLSearchParams();
+      if (params) {
+        Object.keys(params).forEach((k) => {
+          if (params[k] != null && params[k] !== "") q.set(k, params[k]);
+        });
+      }
+      const url = this.base() + "/" + table + (q.toString() ? "?" + q : "");
+      const res = await fetch(url, { headers: this.headers() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || res.statusText);
+      return { data: data.data || [], count: data.count };
+    },
+    async get(table, id) {
+      const res = await fetch(this.base() + "/" + table + "/" + id, { headers: this.headers() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return { data: data.data };
+    },
+    async create(table, body) {
+      const res = await fetch(this.base() + "/" + table, {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return { data: data.data };
+    },
+    async update(table, id, body) {
+      const res = await fetch(this.base() + "/" + table + "/" + id, {
+        method: "PATCH",
+        headers: this.headers(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return { data: data.data };
+    },
+    async remove(table, id) {
+      const res = await fetch(this.base() + "/" + table + "/" + id, {
+        method: "DELETE",
+        headers: this.headers(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return { success: true };
+    },
+    async login(kode) {
+      const res = await fetch(this.base() + "/login", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify({ kode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data.data;
+    },
+    async absen(tipe, kode) {
+      const res = await fetch(this.base() + "/absen", {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify({ tipe, kode }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    },
+  };
+
+  function api() {
+    if (edgeAPI.enabled()) return edgeAPI;
+    if (window.isSupabaseConfigured && window.isSupabaseConfigured()) return supabaseAPI;
+    return localAPI;
+  }
+
   window.DB = {
     list: async (table, params) => {
       const key = cacheKey(table, params);
@@ -2675,7 +2781,6 @@ window.isSupabaseConfigured = function () {
       if (hit && Date.now() - hit.t < CACHE_TTL) {
         return { data: hit.data, count: hit.data.length, fromCache: true };
       }
-      // Jika ada request yang sama masih jalan, tunggu hasil yang sama
       if (hit && hit.pending) return hit.pending;
       const pending = api()
         .list(table, params)
@@ -2707,8 +2812,17 @@ window.isSupabaseConfigured = function () {
       invalidateCache(table);
       return res;
     },
+    login: async (kode) => {
+      if (edgeAPI.enabled() && edgeAPI.login) return edgeAPI.login(kode);
+      throw new Error("Login via Edge Function belum aktif");
+    },
+    absen: async (tipe, kode) => {
+      if (edgeAPI.enabled() && edgeAPI.absen) return edgeAPI.absen(tipe, kode);
+      throw new Error("Absen via Edge Function belum aktif");
+    },
     invalidate: invalidateCache,
-    isDemo: () => !(window.isSupabaseConfigured && window.isSupabaseConfigured()),
+    usingEdge: () => edgeAPI.enabled(),
+    isDemo: () => !edgeAPI.enabled() && !(window.isSupabaseConfigured && window.isSupabaseConfigured()),
   };
 })();
 
@@ -4430,6 +4544,14 @@ window.initCrudPage = function (opts) {
       msg.className = "scan-result scan-info";
       msg.textContent = "⏳ Memproses " + kodeLabel + ": " + text + "…";
       try {
+        if (window.DB.usingEdge && window.DB.usingEdge()) {
+          const out = await window.DB.absen(mode, text);
+          msg.className = "scan-result scan-success";
+          msg.textContent = "✅ " + (out.message || "Absensi berhasil");
+          window.toast("✅ " + (out.message || "OK"));
+          loadToday();
+          return;
+        }
         const sesiInfo = detectSesi();
         if (!sesiInfo) {
           msg.className = "scan-result scan-error";
@@ -4532,127 +4654,124 @@ window.initCrudPage = function (opts) {
 
 
 
+
   // ========== AUTH (login sementara) ==========
   window.AUTH = {
     KEY: "sis_session",
     get() {
-      try {
-        return JSON.parse(sessionStorage.getItem(this.KEY) || "null");
-      } catch (e) {
-        return null;
-      }
+      try { return JSON.parse(sessionStorage.getItem(this.KEY) || "null"); }
+      catch (e) { return null; }
     },
-    set(s) {
-      sessionStorage.setItem(this.KEY, JSON.stringify(s));
-    },
-    clear() {
-      sessionStorage.removeItem(this.KEY);
-    },
-    isLoggedIn() {
-      return !!this.get();
-    },
+    set(s) { sessionStorage.setItem(this.KEY, JSON.stringify(s)); },
+    clear() { sessionStorage.removeItem(this.KEY); },
+    isLoggedIn() { return !!this.get(); },
     role() {
       const s = this.get();
-      return s ? s.role : null;
+      return s ? s.role : "guest";
     },
   };
 
+  async function getAdminPin() {
+    try {
+      const res = await window.DB.list("admin_akun");
+      if (res.data && res.data[0] && res.data[0].pin) return String(res.data[0].pin);
+    } catch (e) {}
+    const local = localStorage.getItem("sis_admin_pin");
+    if (local) return local;
+    return String((window.APP_CONFIG && window.APP_CONFIG.ADMIN_PIN) || "999999");
+  }
+
   function applyRoleUI() {
     const s = window.AUTH.get();
-    document.body.classList.remove("role-siswa", "role-guru", "role-admin");
-    if (!s) return;
-    document.body.classList.add("role-" + s.role);
+    const role = s ? s.role : "guest";
+    document.body.classList.remove("role-guest", "role-siswa", "role-guru", "role-admin");
+    document.body.classList.add("role-" + role);
 
-    // nama di topbar
-    const nameEl = document.querySelector(".user-name");
-    if (nameEl) nameEl.textContent = s.nama || s.role;
-    const av = document.querySelector(".profile-btn .avatar");
-    if (av && s.nama) {
-      const parts = s.nama.trim().split(/\s+/);
-      av.textContent = ((parts[0] && parts[0][0]) || "U") + ((parts[1] && parts[1][0]) || "");
+    const topLogin = document.getElementById("btnTopLogin");
+    const profileBtn = document.getElementById("profileBtn");
+    const profileWrap = document.getElementById("profileWrap");
+    if (topLogin) topLogin.style.display = role === "guest" ? "" : "none";
+    if (profileBtn) profileBtn.style.display = role === "guest" ? "none" : "";
+    if (profileWrap) profileWrap.style.display = role === "guest" ? "none" : "";
+
+    if (s) {
+      const nameEl = document.querySelector(".user-name");
+      if (nameEl) nameEl.textContent = s.nama || s.role;
+      const av = document.querySelector(".profile-btn .avatar, .avatar");
+      if (av && s.nama) {
+        const parts = s.nama.trim().split(/\s+/);
+        av.textContent = ((parts[0] && parts[0][0]) || "U") + ((parts[1] && parts[1][0]) || "");
+      }
     }
-    const du = document.getElementById("dropdownUserName");
-    if (du) du.textContent = s.nama || s.role;
-
-    // role label near topbar if any
   }
 
   function showLogin() {
     const ov = document.getElementById("loginOverlay");
-    if (ov) ov.classList.remove("hidden");
-    document.body.style.overflow = "hidden";
+    if (ov) {
+      ov.classList.remove("hidden");
+      const inp = document.getElementById("loginKode");
+      if (inp) { inp.value = ""; setTimeout(() => inp.focus(), 100); }
+      const err = document.getElementById("loginError");
+      if (err) { err.classList.remove("show"); err.textContent = ""; }
+    }
   }
   function hideLogin() {
     const ov = document.getElementById("loginOverlay");
     if (ov) ov.classList.add("hidden");
-    document.body.style.overflow = "";
   }
 
   function allowedHashForRole(role, hash) {
-    if (!role) return false;
+    if (!role || role === "guest") {
+      return !hash || hash === "dashboard";
+    }
     if (role === "admin") return true;
     const h = hash || "";
     if (!h || h === "dashboard") return true;
     if (role === "siswa") {
-      // dashboard + siswa menus only
-      return ["sidik-jari", "lihat-nilai"].indexOf(h) >= 0 || h.indexOf("siswa") >= 0;
+      return h === "sidik-jari" || h.indexOf("siswa") >= 0;
     }
     if (role === "guru") {
-      return (
-        ["scan-barcode", "input-nilai", "daftar-nilai", "jadwal-mapel", "rekap"].indexOf(h) >= 0 ||
-        h.indexOf("guru") >= 0
-      );
+      return ["scan-barcode", "input-nilai", "daftar-nilai"].indexOf(h) >= 0 || h.indexOf("guru") >= 0;
     }
     return false;
   }
 
   async function doLogin() {
-    const tab = document.querySelector(".login-tabs button.active")?.dataset.loginTab || "siswa";
     const err = document.getElementById("loginError");
     err.classList.remove("show");
     err.textContent = "";
+    const kode = (document.getElementById("loginKode").value || "").trim();
+    if (!kode) {
+      err.textContent = "Masukkan NISN (10 digit) atau PIN (6 digit)";
+      err.classList.add("show");
+      return;
+    }
 
     try {
-      if (tab === "siswa") {
-        const kode = (document.getElementById("loginNisn").value || "").trim();
-        if (!kode) throw new Error("Masukkan NISN / NSIN");
+      if (window.DB.usingEdge && window.DB.usingEdge()) {
+        const session = await window.DB.login(kode);
+        window.AUTH.set(session);
+      } else if (/^\d{10}$/.test(kode)) {
         const res = await window.DB.list("data_siswa");
         const s = (res.data || []).find(
           (x) => String(x.nisn || "") === kode || String(x.nsin || "") === kode
         );
-        if (!s) throw new Error("Siswa tidak ditemukan. Periksa NISN/NSIN.");
-        window.AUTH.set({
-          role: "siswa",
-          id: s.id,
-          nama: s.nama,
-          kode: kode,
-          kelas: s.kelas || "",
-        });
-      } else if (tab === "guru") {
-        const pin = (document.getElementById("loginPin").value || "").trim();
-        if (!pin) throw new Error("Masukkan PIN guru");
-        const res = await window.DB.list("data_guru");
-        const g = (res.data || []).find((x) => String(x.pin || "") === pin);
-        if (!g) throw new Error("PIN guru tidak valid.");
-        window.AUTH.set({
-          role: "guru",
-          id: g.id,
-          nama: g.nama,
-          kode: g.nip || "",
-          pin: pin,
-        });
+        if (!s) throw new Error("Siswa dengan NISN/NSIN tersebut tidak ditemukan");
+        window.AUTH.set({ role: "siswa", id: s.id, nama: s.nama, kode: kode, kelas: s.kelas || "" });
+      } else if (/^\d{6}$/.test(kode)) {
+        const adminPin = await getAdminPin();
+        if (kode === adminPin) {
+          window.AUTH.set({ role: "admin", id: "admin", nama: "Administrator", kode: "admin" });
+        } else {
+          const res = await window.DB.list("data_guru");
+          const g = (res.data || []).find((x) => String(x.pin || "") === kode);
+          if (!g) throw new Error("PIN tidak dikenali (bukan admin & bukan guru)");
+          window.AUTH.set({ role: "guru", id: g.id, nama: g.nama, kode: g.nip || "", pin: kode });
+        }
       } else {
-        const pin = (document.getElementById("loginPin").value || "").trim();
-        const adminPin = (window.APP_CONFIG && window.APP_CONFIG.ADMIN_PIN) || "9999";
-        if (!pin) throw new Error("Masukkan PIN admin");
-        if (pin !== String(adminPin)) throw new Error("PIN admin salah.");
-        window.AUTH.set({
-          role: "admin",
-          id: "admin",
-          nama: "Administrator",
-          kode: "admin",
-        });
+        throw new Error("Format salah. Siswa: 10 digit · Guru/Admin: 6 digit");
       }
+
       hideLogin();
       applyRoleUI();
       location.hash = "#/";
@@ -4665,33 +4784,169 @@ window.initCrudPage = function (opts) {
   }
 
   function setupLoginUI() {
-    const tabs = document.querySelectorAll(".login-tabs button");
-    tabs.forEach((b) =>
-      b.addEventListener("click", () => {
-        tabs.forEach((x) => x.classList.remove("active"));
-        b.classList.add("active");
-        const tab = b.dataset.loginTab;
-        document.getElementById("loginFieldSiswa").style.display = tab === "siswa" ? "block" : "none";
-        document.getElementById("loginFieldPin").style.display = tab === "siswa" ? "none" : "block";
-        document.getElementById("loginError").classList.remove("show");
-      })
-    );
     document.getElementById("btnDoLogin")?.addEventListener("click", doLogin);
-    document.getElementById("loginNisn")?.addEventListener("keydown", (e) => {
+    document.getElementById("loginKode")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") doLogin();
     });
-    document.getElementById("loginPin")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") doLogin();
-    });
+    document.getElementById("btnLoginCancel")?.addEventListener("click", hideLogin);
+    document.getElementById("btnTopLogin")?.addEventListener("click", showLogin);
     document.getElementById("btnLogout")?.addEventListener("click", (e) => {
       e.preventDefault();
       window.AUTH.clear();
-      document.body.classList.remove("role-siswa", "role-guru", "role-admin");
-      showLogin();
+      applyRoleUI();
+      hideLogin();
       location.hash = "#/";
+      if (typeof route === "function") route();
+      window.toast("Anda telah keluar");
+    });
+    // klik luar modal = tutup
+    document.getElementById("loginOverlay")?.addEventListener("click", (e) => {
+      if (e.target.id === "loginOverlay") hideLogin();
     });
   }
 
+  // ========== ADMIN: Reset PIN & Proteksi Periode ==========
+  window.initResetPinAdminPage = async function () {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.classList.add("crud-page");
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    document.querySelector('.menu-item[data-page="reset-pin-admin"]')?.classList.add("active");
+    const cur = await getAdminPin();
+    main.innerHTML =
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-key"></i> Reset PIN Admin</h1></div>' +
+      '<div class="filter-form" style="max-width:420px">' +
+      '<div class="ff-row"><span class="ff-label">PIN saat ini</span><input type="password" id="pinOld" placeholder="6 digit" maxlength="6" /></div>' +
+      '<div class="ff-row"><span class="ff-label">PIN baru</span><input type="password" id="pinNew" placeholder="6 digit" maxlength="6" /></div>' +
+      '<div class="ff-row"><span class="ff-label">Ulangi PIN</span><input type="password" id="pinNew2" placeholder="6 digit" maxlength="6" /></div>' +
+      '<div class="ff-actions"><button type="button" class="btn btn-primary" id="btnSaveAdminPin" style="grid-column:1/-1"><i class="fas fa-save"></i> Simpan PIN Admin</button></div>' +
+      '<p style="font-size:12px;color:#64748b;margin-top:10px">PIN admin harus 6 digit angka. Default awal: 999999</p></div>';
+    document.getElementById("btnSaveAdminPin").onclick = async () => {
+      const oldP = (document.getElementById("pinOld").value || "").trim();
+      const n1 = (document.getElementById("pinNew").value || "").trim();
+      const n2 = (document.getElementById("pinNew2").value || "").trim();
+      if (oldP !== cur) return window.toast("PIN saat ini salah", "error");
+      if (!/^\d{6}$/.test(n1)) return window.toast("PIN baru harus 6 digit", "error");
+      if (n1 !== n2) return window.toast("Ulangi PIN tidak sama", "error");
+      try {
+        let list = [];
+        try {
+          list = ((await window.DB.list("admin_akun")).data) || [];
+        } catch (e) { list = []; }
+        if (list[0]) {
+          await window.DB.update("admin_akun", list[0].id, { pin: n1, updated_at: new Date().toISOString() });
+        } else {
+          await window.DB.create("admin_akun", { nama: "Administrator", pin: n1 });
+        }
+        if (window.APP_CONFIG) window.APP_CONFIG.ADMIN_PIN = n1;
+        window.toast("PIN Admin berhasil diubah");
+      } catch (e) {
+        // fallback localStorage jika tabel belum ada
+        localStorage.setItem("sis_admin_pin", n1);
+        if (window.APP_CONFIG) window.APP_CONFIG.ADMIN_PIN = n1;
+        window.toast("PIN Admin disimpan (lokal). Jalankan SQL admin_akun untuk sync cloud.");
+      }
+    };
+  };
+
+  window.initResetPinGuruPage = async function () {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.classList.add("crud-page");
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    document.querySelector('.menu-item[data-page="reset-pin-guru"]')?.classList.add("active");
+    const res = await window.DB.list("data_guru").catch(() => ({ data: [] }));
+    const gurus = res.data || [];
+    main.innerHTML =
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-user-lock"></i> Reset PIN Guru</h1></div>' +
+      '<div class="filter-form">' +
+      '<div class="ff-row"><span class="ff-label">Pilih Guru</span><select id="rpgGuru"><option value="">— pilih —</option>' +
+      gurus.map((g) => '<option value="' + g.id + '">' + (g.nama || "") + (g.nip ? " · " + g.nip : "") + "</option>").join("") +
+      '</select></div>' +
+      '<div class="ff-row"><span class="ff-label">PIN baru</span><input type="text" id="rpgPin" placeholder="6 digit" maxlength="6" inputmode="numeric" /></div>' +
+      '<div class="ff-actions"><button type="button" class="btn btn-primary" id="btnRpgSave" style="grid-column:1/-1"><i class="fas fa-save"></i> Reset PIN</button></div>' +
+      '<p style="font-size:12px;color:#64748b;margin-top:8px">PIN guru harus 6 digit. Dipakai untuk login.</p></div>' +
+      '<div class="section-card" style="margin-top:12px"><div class="table-wrapper"><table class="data-table"><thead><tr><th>No</th><th>Nama</th><th>NIP</th><th>PIN</th></tr></thead><tbody>' +
+      (gurus.length
+        ? gurus.map((g, i) => "<tr><td>" + (i + 1) + "</td><td>" + (g.nama || "—") + "</td><td>" + (g.nip || "—") + "</td><td>" + (g.pin ? "******" : "<em>belum</em>") + "</td></tr>").join("")
+        : '<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b">Belum ada data guru</td></tr>') +
+      "</tbody></table></div></div>";
+    document.getElementById("btnRpgSave").onclick = async () => {
+      const id = document.getElementById("rpgGuru").value;
+      const pin = (document.getElementById("rpgPin").value || "").trim();
+      if (!id) return window.toast("Pilih guru", "error");
+      if (!/^\d{6}$/.test(pin)) return window.toast("PIN harus 6 digit angka", "error");
+      try {
+        await window.DB.update("data_guru", id, { pin: pin });
+        window.toast("PIN guru diperbarui");
+        window.initResetPinGuruPage();
+      } catch (e) {
+        window.toast(String(e.message || e), "error");
+      }
+    };
+  };
+
+  window.initProteksiPeriodePage = async function () {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+    main.classList.add("crud-page");
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    document.querySelector('.menu-item[data-page="proteksi-periode"]')?.classList.add("active");
+    const res = await window.DB.list("periode").catch(() => ({ data: [] }));
+    const rows = res.data || [];
+    main.innerHTML =
+      '<div class="page-toolbar"><h1 class="page-title"><i class="fas fa-shield-alt"></i> Proteksi Periode</h1></div>' +
+      '<p style="font-size:13px;color:#64748b;margin:0 6px 12px">Periode terkunci tidak bisa diubah/dihapus (kecuali dibuka lagi oleh admin).</p>' +
+      '<div class="section-card"><div class="table-wrapper"><table class="data-table"><thead><tr>' +
+      "<th>No</th><th>Tahun Ajaran</th><th>Semester</th><th>Status</th><th>Proteksi</th><th>Aksi</th></tr></thead><tbody id=" +
+      '"ppBody"></tbody></table></div></div>';
+    const body = document.getElementById("ppBody");
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Belum ada periode</td></tr>';
+      return;
+    }
+    body.innerHTML = rows
+      .map((r, i) => {
+        const locked = r.locked === true || r.locked === "true" || r.proteksi === true;
+        return (
+          "<tr><td>" +
+          (i + 1) +
+          "</td><td>" +
+          (r.tahun_ajaran || "—") +
+          "</td><td>" +
+          (r.semester || "—") +
+          "</td><td>" +
+          (r.status || "—") +
+          '</td><td><strong style="color:' +
+          (locked ? "#b91c1c" : "#059669") +
+          '">' +
+          (locked ? "Terkunci" : "Terbuka") +
+          "</strong></td><td>" +
+          '<button type="button" class="btn ' +
+          (locked ? "btn-secondary" : "btn-danger") +
+          ' btn-sm btn-pp" data-id="' +
+          r.id +
+          '" data-lock="' +
+          (locked ? "0" : "1") +
+          '">' +
+          (locked ? "Buka" : "Kunci") +
+          "</button></td></tr>"
+        );
+      })
+      .join("");
+    body.querySelectorAll(".btn-pp").forEach((b) =>
+      b.addEventListener("click", async () => {
+        const lock = b.dataset.lock === "1";
+        try {
+          await window.DB.update("periode", b.dataset.id, { locked: lock });
+          window.toast(lock ? "Periode dikunci" : "Periode dibuka");
+          window.initProteksiPeriodePage();
+        } catch (e) {
+          window.toast("Gagal: " + (e.message || e) + " — pastikan kolom locked ada di tabel periode", "error");
+        }
+      })
+    );
+  };
 
   // ========== SPA ROUTER ==========
   const PAGES = {
@@ -4792,17 +5047,13 @@ window.initCrudPage = function (opts) {
   }
 
   async function route() {
-    if (!window.AUTH.isLoggedIn()) {
-      showLogin();
-      return;
-    }
-    hideLogin();
     applyRoleUI();
+    hideLogin();
 
     const hash = (location.hash || "#/").replace(/^#\/?/, "") || "";
     const role = window.AUTH.role();
     if (hash && hash !== "dashboard" && !allowedHashForRole(role, hash)) {
-      window.toast("Akses ditolak untuk peran " + role, "error");
+      window.toast(role === "guest" ? "Silakan masuk terlebih dahulu" : "Akses ditolak untuk peran " + role, "error");
       location.hash = "#/";
       return;
     }
@@ -4860,6 +5111,28 @@ window.initCrudPage = function (opts) {
       catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
       return;
     }
+    if (hash === "reset-pin-admin") {
+      if (window.AUTH.role() !== "admin") { location.hash = "#/"; return; }
+      setActiveMenu("reset-pin-admin");
+      showPageLoading(main, "Reset PIN Admin");
+      try { await window.initResetPinAdminPage(); } catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">' + (e.message||e) + '</div>'; }
+      return;
+    }
+    if (hash === "reset-pin-guru") {
+      if (window.AUTH.role() !== "admin") { location.hash = "#/"; return; }
+      setActiveMenu("reset-pin-guru");
+      showPageLoading(main, "Reset PIN Guru");
+      try { await window.initResetPinGuruPage(); } catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">' + (e.message||e) + '</div>'; }
+      return;
+    }
+    if (hash === "proteksi-periode") {
+      if (window.AUTH.role() !== "admin") { location.hash = "#/"; return; }
+      setActiveMenu("proteksi-periode");
+      showPageLoading(main, "Proteksi Periode");
+      try { await window.initProteksiPeriodePage(); } catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">' + (e.message||e) + '</div>'; }
+      return;
+    }
+
     const conf = PAGES[hash];
     if (!conf) {
       main.innerHTML = '<div class="section-card" style="padding:40px;text-align:center"><h2>Halaman tidak ditemukan</h2><p><a href="#/">Kembali ke Dashboard</a></p></div>';
@@ -4875,13 +5148,9 @@ window.initCrudPage = function (opts) {
   window.addEventListener("hashchange", route);
   function bootApp() {
     setupLoginUI();
-    if (!window.AUTH.isLoggedIn()) {
-      showLogin();
-    } else {
-      hideLogin();
-      applyRoleUI();
-      route();
-    }
+    applyRoleUI();
+    hideLogin();
+    route();
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bootApp);
