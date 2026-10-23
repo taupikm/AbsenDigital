@@ -452,13 +452,13 @@
     /* ========== SHARED INFO + STATS SECTION ========== */
     .info-stats-section {
       background: white;
-      border-radius: 24px;
-      padding: 10px;
+      border-radius: 16px;
+      padding: 20px;
       margin-bottom: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
       border: 1px solid var(--gray-200);
       display: grid;
-      grid-template-columns: 260px 1fr;
+      grid-template-columns: 240px 1fr;
       gap: 20px;
       align-items: stretch; /* tinggi kartu & stats sejajar */
     }
@@ -664,7 +664,7 @@
     .org-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 13px;
     }
 
     .org-table th {
@@ -744,7 +744,7 @@
     }
 
     .data-table th {
-      background: linear-gradient(135deg, var(--blue-700), var(--blue-600));
+      background: #1e40af; /* biru solid, tanpa gradient transparan */
       color: white;
       font-weight: 600;
       text-align: left;
@@ -753,11 +753,11 @@
     }
 
     .data-table th:first-child {
-      border-radius: 11px 0 0 0;
+      border-radius: 0;
     }
 
     .data-table th:last-child {
-      border-radius: 0 11px 0 0;
+      border-radius: 0;
     }
 
     .data-table td {
@@ -783,7 +783,7 @@
       box-shadow: 2px 0 4px rgba(0,0,0,.06);
     }
     .data-table th.col-nama {
-      background: linear-gradient(135deg, var(--blue-700), var(--blue-600));
+      background: #1e40af;
       z-index: 3;
     }
     .data-table tbody tr:hover td.col-nama {
@@ -803,7 +803,7 @@
       background: #fff;
     }
     .data-table th.col-check {
-      background: linear-gradient(135deg, var(--blue-700), var(--blue-600));
+      background: #1e40af;
       z-index: 3;
     }
     .data-table tbody tr:hover td.col-check {
@@ -1043,12 +1043,33 @@
       }
 
       .main-content {
-        padding: 12px;
+        padding: 8px 4px 12px;
         margin-top: 56px;
       }
-      /* CRUD: manfaatkan lebar HP penuh */
+      /* Dashboard: kurangi margin kiri-kanan ~3mm */
+      .info-stats-section {
+        padding: 10px 6px;
+        gap: 8px;
+        border-radius: 12px;
+      }
+      .stat-card {
+        min-height: 48px;
+        border-radius: 8px;
+      }
+      .stats-legend {
+        font-size: 9.5px;
+      }
+      .stats-legend .dot {
+        width: 10px;
+        height: 10px;
+      }
+      /* CRUD: tabel sampai tepi, tanpa “kotak” tebal */
       .main-content.crud-page {
-        padding: 8px 6px 16px;
+        padding: 6px 0 12px;
+      }
+      .crud-page .page-toolbar {
+        padding: 0 6px;
+        margin-bottom: 8px;
       }
       .crud-page .page-title {
         font-size: 15px;
@@ -1070,16 +1091,25 @@
         min-width: 72px;
         padding: 6px 8px;
       }
+      .crud-page .demo-banner {
+        margin: 0 6px 8px;
+      }
       .crud-page .section-card {
-        padding: 8px 4px;
-        border-radius: 10px;
-        border-left: none;
-        border-right: none;
+        padding: 0;
+        border-radius: 0;
+        border: none;
         box-shadow: none;
+        background: transparent;
       }
       .crud-page .table-wrapper {
-        border-radius: 8px;
-        margin: 0 -2px;
+        border-radius: 0;
+        margin: 0;
+        border-left: none;
+        border-right: none;
+        border-color: var(--gray-200);
+      }
+      .crud-page .table-footer {
+        padding: 8px 6px 0;
       }
       .crud-page .data-table {
         font-size: 12px;
@@ -1087,6 +1117,13 @@
       .crud-page .data-table th,
       .crud-page .data-table td {
         padding: 8px 8px;
+      }
+      .crud-page .data-table th {
+        background: #1e40af;
+      }
+      .crud-page .data-table th.col-nama,
+      .crud-page .data-table th.col-check {
+        background: #1e40af;
       }
       .crud-page .data-table th.col-nama,
       .crud-page .data-table td.col-nama {
@@ -1105,11 +1142,11 @@
 
       .info-stats-section {
         grid-template-columns: 1fr 1.3fr;
-        gap: 10px;
-        padding: 12px;
+        gap: 8px;
+        padding: 10px 6px;
       }
       .info-card {
-        padding: 12px 8px;
+        padding: 10px 6px;
       }
       .info-avatar {
         width: 56px;
@@ -1154,12 +1191,12 @@
       }
     }
 
-    /* HP sangat sempit: tetap side-by-side, kartunya lebih ringkas */
+    /* HP sangat sempit: tetap tampilkan label : nilai seperti laptop */
     @media (max-width: 400px) {
       .info-stats-section {
-        grid-template-columns: 110px 1fr;
-        gap: 8px;
-        padding: 10px;
+        grid-template-columns: minmax(120px, 42%) 1fr;
+        gap: 6px;
+        padding: 8px 6px;
       }
       .info-avatar {
         width: 48px;
@@ -1176,21 +1213,34 @@
         font-size: 9.5px;
       }
       .info-list div {
-        grid-template-columns: 1fr;
-        text-align: center;
+        grid-template-columns: 62px 8px 1fr;
+        text-align: left;
       }
       .info-list .label,
       .info-list .colon {
-        display: none;
+        display: block;
       }
       .info-list .value {
-        text-align: center;
+        text-align: left;
+      }
+      .stat-card {
+        min-height: 44px;
+        border-radius: 8px;
+        padding: 6px 2px;
       }
       .stat-card .value {
         font-size: 15px;
       }
-      .stat-card .label {
-        font-size: 8px;
+      .stats-legend {
+        font-size: 9px;
+        margin-top: 4px;
+      }
+      .stats-legend .dot {
+        width: 9px;
+        height: 9px;
+      }
+      .stats-legend .leg {
+        margin-right: 6px;
       }
     }
   /* ========== PAGE TOOLBAR & CRUD ========== */
