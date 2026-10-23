@@ -1668,7 +1668,11 @@
       background: #0f172a;
       border-radius: 14px;
       border: 1px solid var(--gray-200);
-      min-height: 240px;
+      width: 100%;
+      max-width: 100%;
+      height: 42vh;
+      max-height: 320px;
+      min-height: 200px;
       display: none; /* tersembunyi saat kamera tertutup */
       align-items: center;
       justify-content: center;
@@ -1680,8 +1684,43 @@
     .scan-cam-box.open {
       display: flex;
     }
-    .scan-cam-box video { width: 100% !important; border-radius: 14px; }
+    /* Cegah Html5Qrcode memenuhi seluruh layar */
+    .scan-cam-box,
+    .scan-cam-box #readerScan,
+    #readerScan {
+      max-height: 42vh !important;
+    }
+    .scan-cam-box video,
+    #readerScan video {
+      width: 100% !important;
+      max-height: 42vh !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      border-radius: 14px;
+    }
+    .scan-cam-box img,
+    #readerScan img {
+      max-height: 42vh !important;
+    }
+    .scan-cam-box > div,
+    #readerScan > div {
+      max-height: 42vh !important;
+    }
     .scan-cam-box.locked { opacity: 0.55; }
+    @media (max-width: 640px) {
+      .scan-cam-box {
+        height: 38vh;
+        max-height: 280px;
+        min-height: 180px;
+      }
+      .scan-cam-box,
+      .scan-cam-box #readerScan,
+      #readerScan,
+      .scan-cam-box video,
+      #readerScan video {
+        max-height: 38vh !important;
+      }
+    }
     .scan-history-card .data-table,
     .scan-history-card .scan-log-table {
       font-size: 11.5px;
@@ -5135,10 +5174,10 @@ window.initCrudPage = function (opts) {
           {
             fps: 30,
             qrbox: function (viewW, viewH) {
-              const s = Math.floor(Math.min(viewW, viewH) * 0.72);
-              return { width: s, height: s };
+              const s = Math.floor(Math.min(viewW, viewH) * 0.65);
+              return { width: Math.max(180, s), height: Math.max(180, s) };
             },
-            aspectRatio: 1.777,
+            aspectRatio: 1.0,
             disableFlip: false,
           },
           function (decoded) {
