@@ -1682,7 +1682,8 @@
     }
     .scan-cam-box video { width: 100% !important; border-radius: 14px; }
     .scan-cam-box.locked { opacity: 0.55; }
-    .scan-history-card .data-table {
+    .scan-history-card .data-table,
+    .scan-history-card .scan-log-table {
       font-size: 11.5px;
     }
     .scan-history-card .data-table th,
@@ -1690,8 +1691,9 @@
       padding: 7px 8px;
       white-space: nowrap;
     }
-    .scan-history-card .data-table td:nth-child(3) {
-      max-width: 180px;
+    .scan-history-card .data-table td:nth-child(3),
+    .scan-history-card .data-table td:nth-child(9) {
+      max-width: 160px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
@@ -5003,10 +5005,10 @@ window.initCrudPage = function (opts) {
       '<div class="scan-history-card">' +
       "<h3><i class=\"fas fa-list\"></i> Tabel Riwayat Scan</h3>" +
       sesiTabsHtml +
-      '<div class="table-wrapper"><table class="data-table"><thead><tr>' +
-      "<th>No</th><th>Kode</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Sesi</th><th>Status</th><th>Jam</th>" +
+      '<div class="table-wrapper"><table class="data-table scan-log-table"><thead><tr>' +
+      "<th>No</th><th>Kode</th><th>Nama</th><th>Tipe</th><th>Kelas</th><th>Sesi</th><th>Status</th><th>Jam</th><th>Di-scan oleh</th>" +
       '</tr></thead><tbody id="absenTodayBody">' +
-      '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:16px">Memuat…</td></tr>' +
+      '<tr><td colspan="9" style="text-align:center;color:#64748b;padding:16px">Memuat…</td></tr>' +
       "</tbody></table></div></div></div>";
 
     let logFilterSesi = ""; // "" = semua
@@ -5022,7 +5024,7 @@ window.initCrudPage = function (opts) {
         rows.sort((a, b) => String(b.jam_scan || "").localeCompare(String(a.jam_scan || "")));
         if (!rows.length) {
           body.innerHTML =
-            '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:16px">Belum ada absensi' +
+            '<tr><td colspan="9" style="text-align:center;color:#64748b;padding:16px">Belum ada absensi' +
             (logFilterSesi ? " di sesi ini" : "") +
             "</td></tr>";
           return;
@@ -5053,13 +5055,15 @@ window.initCrudPage = function (opts) {
               (r.status || "—") +
               "</strong></td><td>" +
               jam +
+              "</td><td>" +
+              (r.scanner_nama || r.scanner_by || "—") +
               "</td></tr>"
             );
           })
           .join("");
       } catch (e) {
         body.innerHTML =
-          '<tr><td colspan="8" style="text-align:center;color:#b91c1c">Gagal: ' + (e.message || e) + "</td></tr>";
+          '<tr><td colspan="9" style="text-align:center;color:#b91c1c">Gagal: ' + (e.message || e) + "</td></tr>";
       }
     }
 
@@ -5089,7 +5093,6 @@ window.initCrudPage = function (opts) {
       try {
         let target = scanTarget;
         if (isGuru || mode === "siswa") target = "siswa";
-
         const meta = scannerMeta();
         const out = await window.DB.absen({
           tipe: target,
@@ -5099,14 +5102,14 @@ window.initCrudPage = function (opts) {
           scanner_role: meta.scanner_role,
           mode: "barcode",
         });
-        window._scanPopup(true, "Absensi berhasil", out.message || textKode);
+        // Popup dulu, refresh tabel di background (lebih responsif)
+        window._scanPopup(true, "Absensi berhasil", out.message || textKode, 1200);
+        if (window.DB.invalidate) window.DB.invalidate("absensi");
         loadToday();
       } catch (err) {
-        window._scanPopup(false, "Gagal absensi", String(err.message || err));
+        window._scanPopup(false, "Gagal absensi", String(err.message || err), 2000);
       } finally {
-        setTimeout(function () {
-          window._scanState.processing = false;
-        }, 350);
+        window._scanState.processing = false;
       }
     }
 
@@ -5129,18 +5132,22 @@ window.initCrudPage = function (opts) {
       try {
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 28, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0, disableFlip: false },
-          async function (decoded) {
+          {
+            fps: 30,
+            qrbox: function (viewW, viewH) {
+              const s = Math.floor(Math.min(viewW, viewH) * 0.72);
+              return { width: s, height: s };
+            },
+            aspectRatio: 1.777,
+            disableFlip: false,
+          },
+          function (decoded) {
+            // Jangan pause kamera — proses async agar tetap responsif
             if (window._scanState.processing) return;
-            try {
-              scanner.pause && scanner.pause();
-            } catch (e) {}
-            await processKode(decoded);
-            setTimeout(function () {
-              try {
-                scanner.resume && scanner.resume();
-              } catch (e) {}
-            }, 700);
+            if (window._scanState.lastCode === decoded && Date.now() - (window._scanState.lastAt || 0) < 1500) return;
+            window._scanState.lastCode = decoded;
+            window._scanState.lastAt = Date.now();
+            processKode(decoded);
           },
           function () {}
         );
