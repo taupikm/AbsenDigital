@@ -1186,9 +1186,19 @@
       .crud-page .data-table {
         font-size: 12px;
       }
+      .crud-page .data-table.crud-table {
+        min-width: 100%;
+      }
       .crud-page .data-table th,
       .crud-page .data-table td {
-        padding: 8px 8px;
+        padding: 8px 6px;
+      }
+      .crud-page .data-table th.col-asal,
+      .crud-page .data-table td.col-asal,
+      .crud-page .data-table th.col-pangkat,
+      .crud-page .data-table td.col-pangkat {
+        min-width: 100px;
+        max-width: 140px;
       }
       .crud-page .data-table th {
         background: #1e40af;
@@ -1199,14 +1209,55 @@
       }
       .crud-page .data-table th.col-nama,
       .crud-page .data-table td.col-nama {
-        min-width: 160px;
-        max-width: 220px;
+        min-width: 110px;
+        max-width: 150px;
         left: 36px;
       }
       .crud-page .data-table th.col-check,
       .crud-page .data-table td.col-check {
         width: 36px;
         min-width: 36px;
+      }
+      /* Filter bar sejajar di HP */
+      .periode-filter {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: end;
+        gap: 8px;
+        margin: 0 6px 10px;
+        padding: 10px 8px;
+        border-radius: 10px;
+      }
+      .periode-filter label {
+        width: 100%;
+      }
+      .periode-filter select {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        font-size: 12px;
+        padding: 8px 8px;
+      }
+      .periode-filter > strong {
+        grid-column: 1 / -1;
+        margin-bottom: -2px;
+      }
+      .periode-filter > .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      /* Jika hanya 1 filter full width */
+      .periode-filter.single-col {
+        grid-template-columns: 1fr;
+      }
+      .tabs-bar {
+        gap: 4px;
+        margin: 0 6px 10px;
+        padding: 0;
+      }
+      .tab-btn {
+        padding: 6px 10px;
+        font-size: 11.5px;
       }
       :root {
         --topbar-height: 56px;
@@ -1343,8 +1394,8 @@
     .periode-filter {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
+      align-items: flex-end;
+      gap: 10px 12px;
       margin-bottom: 12px;
       padding: 10px 12px;
       background: var(--blue-50);
@@ -1352,13 +1403,33 @@
       border-radius: 12px;
       font-size: 13px;
     }
+    .periode-filter label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--gray-600);
+      min-width: 0;
+    }
     .periode-filter select {
       border: 1px solid var(--gray-200);
       border-radius: 8px;
       padding: 7px 10px;
       font-size: 13px;
       font-family: inherit;
-      min-width: 200px;
+      min-width: 140px;
+      background: #fff;
+      color: var(--gray-800);
+      font-weight: 500;
+    }
+    .periode-filter > strong {
+      align-self: center;
+      font-size: 12.5px;
+      color: var(--blue-800);
+    }
+    .periode-filter > .btn {
+      align-self: flex-end;
     }
 
 
