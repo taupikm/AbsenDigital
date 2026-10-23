@@ -1361,6 +1361,27 @@
       min-width: 200px;
     }
 
+
+    .page-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 40vh;
+      color: var(--gray-500);
+      gap: 12px;
+      font-size: 14px;
+    }
+    .page-loading .spin {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--blue-100);
+      border-top-color: var(--blue-600);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
   /* ========== PAGE TOOLBAR & CRUD ========== */
 .page-toolbar {
   display: flex;
@@ -2264,12 +2285,64 @@ window.isSupabaseConfigured = function () {
     return localAPI;
   }
 
+  // Cache daftar data agar pindah menu lebih cepat
+  const _cache = new Map();
+  const CACHE_TTL = 45000; // 45 detik
+
+  function cacheKey(table, params) {
+    return table + ":" + JSON.stringify(params || {});
+  }
+
+  function invalidateCache(table) {
+    if (!table) {
+      _cache.clear();
+      return;
+    }
+    for (const k of Array.from(_cache.keys())) {
+      if (k === table || k.startsWith(table + ":")) _cache.delete(k);
+    }
+  }
+
   window.DB = {
-    list: (table, params) => api().list(table, params),
+    list: async (table, params) => {
+      const key = cacheKey(table, params);
+      const hit = _cache.get(key);
+      if (hit && Date.now() - hit.t < CACHE_TTL) {
+        return { data: hit.data, count: hit.data.length, fromCache: true };
+      }
+      // Jika ada request yang sama masih jalan, tunggu hasil yang sama
+      if (hit && hit.pending) return hit.pending;
+      const pending = api()
+        .list(table, params)
+        .then((res) => {
+          const data = res.data || [];
+          _cache.set(key, { t: Date.now(), data });
+          return { data, count: data.length };
+        })
+        .catch((e) => {
+          _cache.delete(key);
+          throw e;
+        });
+      _cache.set(key, { t: 0, data: [], pending });
+      return pending;
+    },
     get: (table, id) => api().get(table, id),
-    create: (table, body) => api().create(table, body),
-    update: (table, id, body) => api().update(table, id, body),
-    remove: (table, id) => api().remove(table, id),
+    create: async (table, body) => {
+      const res = await api().create(table, body);
+      invalidateCache(table);
+      return res;
+    },
+    update: async (table, id, body) => {
+      const res = await api().update(table, id, body);
+      invalidateCache(table);
+      return res;
+    },
+    remove: async (table, id) => {
+      const res = await api().remove(table, id);
+      invalidateCache(table);
+      return res;
+    },
+    invalidate: invalidateCache,
     isDemo: () => !(window.isSupabaseConfigured && window.isSupabaseConfigured()),
   };
 })();
@@ -3849,7 +3922,20 @@ window.initCrudPage = function (opts) {
     document.getElementById("sidebarOverlay")?.classList.remove("show");
   }
 
-  function route() {
+  function showPageLoading(main, title) {
+    main.classList.add("crud-page");
+    main.innerHTML = '<div class="page-loading"><div class="spin"></div><div>Memuat ' + (title || "halaman") + '…</div></div>';
+  }
+
+  function setActiveMenu(page) {
+    document.querySelectorAll(".menu-item").forEach((el) => el.classList.remove("active"));
+    const sel = page
+      ? document.querySelector('.menu-item[data-page="' + page + '"]')
+      : document.querySelector('.menu-item[data-page="dashboard"]');
+    if (sel) sel.classList.add("active");
+  }
+
+  async function route() {
     const hash = (location.hash || "#/").replace(/^#\/?/, "") || "";
     const main = document.getElementById("main-content");
     if (!main) return;
@@ -3859,26 +3945,35 @@ window.initCrudPage = function (opts) {
       dashboardHTML = vd ? vd.innerHTML : main.innerHTML;
     }
 
+    // Langsung tutup sidebar + highlight menu (tanpa menunggu data)
     closeSidebar();
 
     if (!hash || hash === "dashboard") {
       main.classList.remove("crud-page");
       main.innerHTML = '<div id="view-dashboard">' + dashboardHTML + '</div>';
-      document.querySelectorAll(".menu-item").forEach(el => el.classList.remove("active"));
-      document.querySelector('.menu-item[data-page="dashboard"]')?.classList.add("active");
+      setActiveMenu("dashboard");
       return;
     }
 
     if (hash === "mapel-kelas" || hash === "mapel" || hash === "kelas" || hash === "penilaian" || hash === "guru-ampu") {
-      window.initMapelKelasPage(hash === "mapel-kelas" ? "mapel" : hash);
+      setActiveMenu("mapel-kelas");
+      showPageLoading(main, "Mapel & Kelas");
+      try { await window.initMapelKelasPage(hash === "mapel-kelas" ? "mapel" : hash); }
+      catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
       return;
     }
     if (hash === "input-nilai") {
-      window.initInputNilaiPage();
+      setActiveMenu("input-nilai");
+      showPageLoading(main, "Input Nilai");
+      try { await window.initInputNilaiPage(); }
+      catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
       return;
     }
     if (hash === "daftar-nilai") {
-      window.initDaftarNilaiPage();
+      setActiveMenu("daftar-nilai");
+      showPageLoading(main, "Daftar Nilai");
+      try { await window.initDaftarNilaiPage(); }
+      catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
       return;
     }
     const conf = PAGES[hash];
@@ -3886,8 +3981,11 @@ window.initCrudPage = function (opts) {
       main.innerHTML = '<div class="section-card" style="padding:40px;text-align:center"><h2>Halaman tidak ditemukan</h2><p><a href="#/">Kembali ke Dashboard</a></p></div>';
       return;
     }
-    // initCrudPage mengisi #main-content
-    initCrudPage(conf);
+    setActiveMenu(conf.activePage || hash);
+    showPageLoading(main, conf.title || hash);
+    // initCrudPage sinkron setelah shell; data di-load async di dalamnya
+    try { initCrudPage(conf); }
+    catch (e) { main.innerHTML = '<div class="section-card" style="padding:24px">Gagal memuat: ' + (e.message || e) + '</div>'; }
   }
 
   window.addEventListener("hashchange", route);
