@@ -723,15 +723,24 @@
     /* ========== TABLES ========== */
     .table-wrapper {
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       border-radius: 12px;
       border: 1px solid var(--gray-200);
+      width: 100%;
+      margin: 0;
     }
 
     .data-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
-      min-width: 600px;
+      min-width: 100%;
+    }
+
+    /* Tabel CRUD: biarkan melebar natural, scroll horizontal jika perlu */
+    .data-table.crud-table {
+      min-width: max(100%, 720px);
+      table-layout: auto;
     }
 
     .data-table th {
@@ -739,7 +748,7 @@
       color: white;
       font-weight: 600;
       text-align: left;
-      padding: 13px 14px;
+      padding: 12px 12px;
       white-space: nowrap;
     }
 
@@ -752,9 +761,45 @@
     }
 
     .data-table td {
-      padding: 11px 14px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--gray-100);
       color: var(--gray-700);
+      vertical-align: middle;
+    }
+
+    /* Kolom Nama: lebih lebar, satu baris */
+    .data-table th.col-nama,
+    .data-table td.col-nama {
+      min-width: 180px;
+      max-width: 320px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+
+    .data-table th.col-no,
+    .data-table td.col-no {
+      width: 44px;
+      min-width: 44px;
+      text-align: center;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .data-table th.col-lp,
+    .data-table td.col-lp {
+      width: 44px;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .data-table th.col-aksi,
+    .data-table td.aksi {
+      width: 90px;
+      min-width: 90px;
+      white-space: nowrap;
+      text-align: center;
     }
 
     .data-table tbody tr:hover td {
@@ -763,6 +808,15 @@
 
     .data-table tbody tr:last-child td {
       border-bottom: none;
+    }
+
+    /* Halaman CRUD: pakai lebar penuh, kurangi “kotak” */
+    .crud-page .section-card {
+      padding: 12px;
+      border-radius: 12px;
+    }
+    .crud-page .page-toolbar {
+      margin-bottom: 12px;
     }
 
     .badge {
@@ -891,6 +945,33 @@
       .main-content {
         padding: 12px;
         margin-top: 56px;
+      }
+      /* CRUD: manfaatkan lebar HP penuh */
+      .main-content.crud-page {
+        padding: 8px 6px 16px;
+      }
+      .crud-page .section-card {
+        padding: 8px 4px;
+        border-radius: 10px;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+      }
+      .crud-page .table-wrapper {
+        border-radius: 8px;
+        margin: 0 -2px;
+      }
+      .crud-page .data-table {
+        font-size: 12px;
+      }
+      .crud-page .data-table th,
+      .crud-page .data-table td {
+        padding: 8px 8px;
+      }
+      .crud-page .data-table th.col-nama,
+      .crud-page .data-table td.col-nama {
+        min-width: 160px;
+        max-width: 240px;
       }
       :root {
         --topbar-height: 56px;
@@ -1874,6 +1955,7 @@ window.initCrudPage = function (opts) {
   if (act) act.classList.add('active');
 
   const main = document.getElementById("main-content");
+  main.classList.add("crud-page");
   const formFields = columns
     .filter((c) => c.key !== "no" && c.key !== "id")
     .map((c) => {
@@ -1893,6 +1975,13 @@ window.initCrudPage = function (opts) {
     })
     .join("");
 
+  function colClass(key) {
+    if (key === "no") return "col-no";
+    if (key === "nama") return "col-nama";
+    if (key === "jenis_kelamin") return "col-lp";
+    return "";
+  }
+
   main.innerHTML = `
     <div class="page-toolbar">
       <h1 class="page-title"><i class="fas fa-table"></i> ${title}</h1>
@@ -1905,11 +1994,11 @@ window.initCrudPage = function (opts) {
       </div>
     </div>
     <div id="demoBanner" class="demo-banner" style="display:none">
-      Mode Demo (localStorage). Isi <code>js/config.js</code> dengan URL &amp; Anon Key Supabase untuk koneksi database.
+      Mode Demo (localStorage). Supabase belum terhubung — cek APP_CONFIG di file ini.
     </div>
     <div class="section-card">
       <div class="table-wrapper">
-        <table class="data-table" id="dataTable">
+        <table class="data-table crud-table" id="dataTable">
           <thead><tr id="theadRow"></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
@@ -1939,8 +2028,12 @@ window.initCrudPage = function (opts) {
   // Header
   const thead = document.getElementById("theadRow");
   thead.innerHTML =
-    columns.map((c) => `<th style="${c.width ? "width:" + c.width : ""}">${c.label}</th>`).join("") +
-    `<th style="width:100px">Aksi</th>`;
+    columns.map((c) => {
+      const cls = colClass(c.key);
+      const style = c.width && !cls ? `width:${c.width}` : "";
+      return `<th class="${cls}" style="${style}">${c.label}</th>`;
+    }).join("") +
+    `<th class="col-aksi">Aksi</th>`;
 
   if (window.DB.isDemo()) {
     document.getElementById("demoBanner").style.display = "block";
@@ -1974,7 +2067,8 @@ window.initCrudPage = function (opts) {
             if (c.key === "no") v = idx + 1;
             if (c.type === "date") v = window.fmtDate(v);
             if (c.key === "jenis_kelamin" || c.key === "L/P") v = row.jenis_kelamin || v;
-            return `<td>${v == null || v === "" ? "—" : escapeHtml(String(v))}</td>`;
+            const cls = colClass(c.key);
+            return `<td class="${cls}" title="${v == null || v === "" ? "" : escapeHtml(String(v))}">${v == null || v === "" ? "—" : escapeHtml(String(v))}</td>`;
           })
           .join("");
         return `<tr>${cells}
@@ -2196,6 +2290,7 @@ window.initCrudPage = function (opts) {
     closeSidebar();
 
     if (!hash || hash === "dashboard") {
+      main.classList.remove("crud-page");
       main.innerHTML = '<div id="view-dashboard">' + dashboardHTML + '</div>';
       document.querySelectorAll(".menu-item").forEach(el => el.classList.remove("active"));
       document.querySelector('.menu-item[data-page="dashboard"]')?.classList.add("active");
